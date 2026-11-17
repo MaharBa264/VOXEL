@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "pitch": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 127
+    },
+    "velocity": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 127
+    },
+    "startTick": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "durationTicks": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    }
+  },
+  "required": [
+    "id",
+    "pitch",
+    "velocity",
+    "startTick",
+    "durationTicks"
+  ],
+  "additionalProperties": false
+}

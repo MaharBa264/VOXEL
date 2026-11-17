@@ -1,0 +1,14 @@
+node_modules/
+dist/
+src-tauri/target/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+coverage/
+*.log
+.env
+.env.*
+!.env.example
+# Grabaciones personales y proyectos de trabajo; fixtures explícitos sí se versionan.
+projects/

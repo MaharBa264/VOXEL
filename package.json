@@ -1,0 +1,44 @@
+{
+  "name": "voxel-voice-to-music-studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.19.0 <25",
+    "npm": ">=12.0.2 <13"
+  },
+  "packageManager": "npm@12.0.2",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "npm run typecheck && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "smoke:web": "node scripts/smoke-web.mjs",
+    "schemas:generate": "tsx scripts/generate-schemas.ts",
+    "check": "npm run typecheck && npm test && npm run build",
+    "tauri": "tauri",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "tauri build --no-bundle"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "2.12.5",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "tone": "15.1.22",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.5",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.3.0",
+    "ajv": "8.20.0",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vite": "8.3.8",
+    "vitest": "5.1.0"
+  }
+}

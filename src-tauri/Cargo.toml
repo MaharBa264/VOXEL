@@ -1,0 +1,15 @@
+[package]
+name = "voxel"
+version = "0.1.0"
+description = "VOXEL Voice to Music Studio"
+edition = "2021"
+rust-version = "1.90"
+
+[build-dependencies]
+tauri-build = { version = "=2.7.5", features = [] }
+
+[dependencies]
+tauri = { version = "=2.12.6", features = [] }
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]

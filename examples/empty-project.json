@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "id": "example-empty",
+  "name": "Proyecto sin grabaciones",
+  "ppq": 480,
+  "tempoBpm": 120,
+  "timeSignature": { "numerator": 4, "denominator": 4 },
+  "audioAssets": [],
+  "tracks": []
+}
