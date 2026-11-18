@@ -1,0 +1,58 @@
+import { encodeMonoWav } from './wav';
+
+export interface Recording {
+  finished: Promise<Blob>;
+  stop(): void;
+  abort(): void;
+}
+
+export async function startRecording(signal: AbortSignal): Promise<Recording> {
+  if (!navigator.mediaDevices?.getUserMedia || !globalThis.MediaRecorder) throw new Error('Este entorno no permite grabar audio.');
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const release = () => stream.getTracks().forEach((track) => track.stop());
+  if (signal.aborted) { release(); throw new Error('Grabación cancelada.'); }
+  try {
+    const mimeType = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/wav'].find((mime) => MediaRecorder.isTypeSupported(mime));
+    if (!mimeType) throw new Error('No hay un formato de grabación compatible (WebM, Ogg o WAV).');
+    const recorder = new MediaRecorder(stream, { mimeType });
+    const chunks: Blob[] = [];
+    let aborted = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let settled = false;
+    let resolve!: (blob: Blob) => void;
+    let reject!: (reason: Error) => void;
+    const finished = new Promise<Blob>((yes, no) => { resolve = yes; reject = no; });
+    const cleanup = () => { clearTimeout(timer); release(); signal.removeEventListener('abort', abort); };
+    const fail = (error: Error) => { if (!settled) { settled = true; cleanup(); reject(error); } };
+    const stop = () => {
+      // Release the microphone synchronously, before decoding or saving anything.
+      release();
+      if (recorder.state !== 'inactive') recorder.stop();
+    };
+    const abort = () => { aborted = true; stop(); fail(new Error('Grabación cancelada.')); };
+    recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+    recorder.onerror = () => { fail(new Error('La grabación falló. Revisá el micrófono.')); if (recorder.state !== 'inactive') recorder.stop(); };
+    recorder.onstop = () => {
+      cleanup();
+      if (aborted || settled) return;
+      const blob = new Blob(chunks, { type: mimeType.split(';')[0]! });
+      if (!blob.size) { fail(new Error('No se recibió audio del micrófono.')); return; }
+      settled = true; resolve(blob);
+    };
+    signal.addEventListener('abort', abort, { once: true });
+    try { recorder.start(250); } catch (error) { cleanup(); throw error; }
+    timer = setTimeout(stop, 30_000);
+    return { finished, stop, abort };
+  } catch (error) { release(); throw error; }
+}
+
+export async function prepareAnalysis(original: Blob) {
+  const context = new AudioContext();
+  try {
+    const decoded = await context.decodeAudioData(await original.arrayBuffer());
+    const durationSeconds = decoded.duration;
+    const channels = Array.from({ length: decoded.numberOfChannels }, (_, index) => decoded.getChannelData(index));
+    return { wav: encodeMonoWav(channels, decoded.sampleRate), sampleRateHz: decoded.sampleRate,
+      channels: decoded.numberOfChannels, durationSeconds, analysisDurationSeconds: Math.min(30, durationSeconds) };
+  } finally { await context.close(); }
+}

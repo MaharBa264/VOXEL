@@ -1,0 +1,116 @@
+"""Worker contract tests, including one real local-model CLI run."""
+from array import array
+from hashlib import sha256
+import importlib.util
+import json
+import math
+from pathlib import Path
+import struct
+import subprocess
+import sys
+import tempfile
+import unittest
+from unittest.mock import patch
+import wave
+
+ROOT = Path(__file__).resolve().parents[1]
+WORKER = ROOT / 'python' / 'transcribe.py'
+
+
+def wav(path, samples=None, channels=1, width=2, rate=22050):
+    samples = samples if samples is not None else [0] * rate
+    with wave.open(str(path), 'wb') as f:
+        f.setparams((channels, width, rate, 0, 'NONE', 'not compressed'))
+        f.writeframes(array('h', samples).tobytes())
+
+
+class WorkerTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        assert WORKER.exists(), 'transcription CLI must exist'
+        spec = importlib.util.spec_from_file_location('voxel_transcribe', WORKER)
+        cls.worker = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.worker)
+
+    def test_rounding_clipping_invalid_events_and_velocity(self):
+        events = [(0.0005208333333333333, 0.0109375, 69, 0.5, None),
+                  (-1, 0.5, 60, 2, None), (0.9, 4, 61, -1, None),
+                  (1, 2, 62, 1, None), (0.5, 0.5, 63, 1, None),
+                  (float('nan'), 1, 64, 1, None), (0, 1, 128, 1, None),
+                  (0, 1, 65, float('inf'), None), (0.5, -1, 66, 1, None)]
+        notes = self.worker.convert_events(events, 120, 480, 1)
+        self.assertEqual([(n['pitch'], n['startTick'], n['durationTicks'], n['velocity']) for n in notes],
+                         [(69, 1, 10, 64), (60, 0, 480, 127), (61, 864, 96, 1)])
+        self.assertEqual(len({n['id'] for n in notes}), 3)
+
+    def test_silence_skips_model_and_preserves_original(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / '.cache') as folder:
+            p = Path(folder); source = p / 'in.wav'
+            wav(source, [1] * 22050)
+            before = sha256(source.read_bytes()).digest()
+            with patch.object(self.worker, 'infer_events', side_effect=AssertionError('model loaded')):
+                result = self.worker.transcribe(source, p / 'out.json', p / 'out.mid', 120, 480)
+            self.assertEqual(result, {'protocolVersion': 1, 'notes': [], 'silence': True})
+            self.assertEqual(json.loads((p / 'out.json').read_text()), result)
+            self.assertEqual(sha256(source.read_bytes()).digest(), before)
+            self.assertEqual((p / 'out.mid').read_bytes()[:4], b'MThd')
+
+    def test_host_maximum_sample_rate_is_supported(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / '.cache') as folder:
+            p = Path(folder); source = p / 'in.wav'
+            wav(source, [0] * 3840, rate=384000)
+            result = self.worker.transcribe(source, p / 'out.json', p / 'out.mid', 120, 480)
+            self.assertTrue(result['silence'])
+            self.assertEqual(result['notes'], [])
+
+    def test_rejects_invalid_wav_arguments_and_aliases_before_writes(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / '.cache') as folder:
+            p = Path(folder); source = p / 'in.wav'; wav(source)
+            before = source.read_bytes()
+            for tempo, ppq in [(float('nan'), 480), (39, 480), (241, 480), (120, 0), (120, 32768)]:
+                with self.subTest(tempo=tempo, ppq=ppq), self.assertRaises(ValueError):
+                    self.worker.transcribe(source, p / 'out.json', p / 'out.mid', tempo, ppq)
+            for output, midi in [(source, p / 'out.mid'), (p / 'out.json', source), (p / 'same', p / 'same')]:
+                with self.assertRaises(ValueError):
+                    self.worker.transcribe(source, output, midi, 120, 480)
+            for channels, width, rate, count in [(2, 2, 22050, 22050), (1, 1, 22050, 22050), (1, 2, 22050, 0), (1, 2, 1, 31)]:
+                bad = p / 'bad.wav'; wav(bad, [0] * count, channels, width, rate)
+                with self.assertRaises(ValueError):
+                    self.worker.transcribe(bad, p / 'out.json', p / 'out.mid', 120, 480)
+            self.assertEqual(source.read_bytes(), before)
+            self.assertFalse((p / 'out.json').exists())
+
+    def test_actual_cli_a4_matches_midi_ticks_and_keeps_source(self):
+        source = ROOT / '.cache/basic-pitch-smoke/a4.wav'
+        self.assertTrue(source.exists(), 'Run test_runtime.py to create the real A4 fixture')
+        before = sha256(source.read_bytes()).digest()
+        with tempfile.TemporaryDirectory(dir=ROOT / '.cache') as folder:
+            p = Path(folder)
+            run = subprocess.run([sys.executable, '-I', str(WORKER), '--input', str(source), '--output', str(p / 'result.json'), '--midi', str(p / 'melody.mid'), '--tempo', '120', '--ppq', '480'], capture_output=True, text=True, timeout=180)
+            self.assertEqual(run.returncode, 0, run.stderr)
+            self.assertEqual(run.stdout, '')
+            result = json.loads((p / 'result.json').read_text())
+            self.assertEqual(result['protocolVersion'], 1)
+            self.assertFalse(result['silence'])
+            self.assertIn(69, [n['pitch'] for n in result['notes']])
+            import mido
+            midi = mido.MidiFile(p / 'melody.mid')
+            self.assertEqual(midi.ticks_per_beat, 480)
+            self.assertEqual(next(msg.tempo for track in midi.tracks for msg in track if msg.type == 'set_tempo'), 500000)
+            actual = []; active = {}; tick = 0
+            for msg in midi.tracks[0]:
+                tick += msg.time
+                if msg.type == 'note_on' and msg.velocity:
+                    active.setdefault(msg.note, []).append((tick, msg.velocity))
+                elif msg.type == 'note_off':
+                    start, velocity = active[msg.note].pop(0)
+                    actual.append((msg.note, start, tick-start, velocity))
+            expected = [(n['pitch'], n['startTick'], n['durationTicks'], n['velocity']) for n in result['notes']]
+            self.assertCountEqual(actual, expected)
+        self.assertEqual(sha256(source.read_bytes()).digest(), before)
+
+
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
+
+

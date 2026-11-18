@@ -11,15 +11,18 @@ en la arquitectura. Las casillas pendientes no representan funciones disponibles
 - [x] Pruebas de contrato, build web y smoke HTTP.
 - [x] Procedimiento Windows, convenciones de agentes y registro de riesgos.
 - [x] Copia a D: verificada por hashes; pruebas repetidas en destino.
-- [ ] Compilar y abrir el shell nativo en Windows: requiere Rust/Cargo.
-- [ ] Generar y revisar Cargo.lock para reproducibilidad de dependencias Rust.
+- [x] Preparar Rust local en D: y generar Cargo.lock.
+- [x] Compilar el shell nativo debug en Windows con Tauri CLI.
+- [x] Abrir el shell nativo y verificar visualmente la ventana (captura del usuario).
+- [x] Preparar Python 3.11 y fijar dependencias Windows; probar el modelo con audio sintético.
 
-La base web está verificada; la base nativa tiene configuración preparada,
-pero no está validada por compilación o apertura de la aplicación.
+La base web, el build nativo debug y la apertura visual están verificados.
+El flujo integrado de captura, inferencia, piano y guardado pasó en WebView2
+con stream sintético. Build release, voz real y escucha humana siguen pendientes.
 
 ## M01-A — grabar melodía, convertir a MIDI y reproducir piano
 
-Próximo hito solicitado; todavía sin implementación. Orden de trabajo previsto:
+Integración de desarrollo implementada; pendiente aceptación manual. Orden seguido:
 
 1. **Preparar el entorno nativo.** Resolver Rust/Cargo y probar el shell Windows;
    validar Python 3.11 x64 con Basic Pitch 0.4.0 y fijar dependencias reales.
@@ -38,12 +41,12 @@ Próximo hito solicitado; todavía sin implementación. Orden de trabajo previst
 Criterios de aceptación:
 
 - [ ] Una grabación de melodía real se conserva y puede recuperarse.
-- [ ] La inferencia se ejecuta sin servicios de IA remotos, con errores visibles.
-- [ ] Las notas resultantes usan PPQ entero; el MIDI exportado puede abrirse.
+- [x] Inferencia local, errores visibles y cancelación verificados.
+- [x] Notas PPQ y MIDI legible, incluidos parser y descarga nativa.
 - [ ] La melodía se escucha con un piano cuyos recursos no dependen de CDN.
-- [ ] Guardar y reabrir conserva las notas y el audio original.
+- [x] Guardar y reabrir conserva notas y fuente en el test sintético nativo.
 - [ ] El flujo se prueba sin conexión una vez aprovisionadas las dependencias y el modelo.
-- [ ] Se registran entorno, muestras de prueba autorizadas, resultados y limitaciones.
+- [x] Se registran entorno, señal sintética, resultados y limitaciones.
 
 La precisión de transcripción, latencia y recursos del piano deben medirse:
 no hay cifras ni calidad garantizadas en esta etapa.

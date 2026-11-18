@@ -1,34 +1,36 @@
 # VOXEL — Voice to Music Studio
 
-## Alcance de la inicialización
+## Estado de desarrollo
 
-Aplicación independiente para Windows 11 x64. Esta entrega contiene un shell
-React/TypeScript, configuración Tauri 2, contratos de proyecto y pruebas.
-No graba, transcribe, genera MIDI, reproduce audio ni armoniza todavía.
-El siguiente hito es M01-A: grabar una melodía, convertirla a MIDI y reproducirla con piano.
+Objetivo final: aplicación independiente para Windows 11 x64. La base inicial
+evolucionó a M01-A de desarrollo: captura, transcripción local, PPQ/MIDI, piano
+y persistencia. El flujo nativo pasó con señal sintética; micrófono físico,
+escucha y precisión vocal requieren aceptación manual. Sin percusión ni armonización.
 
 ## Límites de los módulos
 
 ```text
 React (src/app) → contratos puros (src/domain)
-     ↓ futuro IPC con comandos tipados y validación
+     ↓ IPC con comandos tipados y validación
 Tauri/Rust (src-tauri) → archivos locales / proceso Python
-     ↓ futuro protocolo de trabajos versionado
-Python + Basic Pitch (python, aún sin implementación)
+     ↓ proceso local cancelable, resultado versionado v1
+Python + Basic Pitch (python/transcribe.py)
 
-React → futuro adaptador Tone.js → Web Audio / salida del equipo
+React → src/audio/piano.ts → Tone.Sampler → Web Audio / salida del equipo
 ```
 
 - `src/app`: presentación. No importa Python ni controla el sistema de archivos.
 - `src/domain`: contratos sin React, Tauri, red ni Web Audio. Zod valida datos
   externos e infiere los tipos TypeScript; no se confía en un cast de JSON.
-- `src-tauri`: ciclo de vida nativo. No registra comandos ni plugins en esta etapa.
-  Futuramente será responsable de rutas seguras, guardado atómico, trabajos,
-  cancelación y arranque/cierre del proceso Python.
-- `python`: reserva documental para el transcriptor local. La interfaz entre
-  procesos, el empaquetado y el lock de dependencias se decidirán antes de M01-A.
-- Tone.js está fijado como dependencia; aún no tiene adaptador ni instancias.
-  El futuro adaptador debe iniciar Web Audio desde un gesto explícito y liberar recursos.
+- `src/audio`: captura MediaRecorder, WAV mono PCM16, exportador SMF y piano.
+  El permiso y Web Audio parten de gestos del usuario.
+- `src/services`: IPC y validación de proyectos con parseProject.
+- `src-tauri/src/host.rs`: almacenamiento, validación de límites y rutas,
+  comandos explícitos y un proceso Python exclusivo con cancelación/timeout.
+- `python/transcribe.py`: valida WAV, filtra silencio, ejecuta el modelo CPU
+  local y convierte a PPQ. Publica resultado JSON v1 y MIDI de esas mismas notas.
+- Piano: cinco samples Salamander CC BY 3.0 incluidos en `public/piano`.
+  Tone.Part programa ataques/finales; detener cancela eventos y libera voces.
 
 No hay servidor HTTP de inferencia, telemetría ni servicios de IA remotos.
 El servidor Vite es sólo de desarrollo y escucha en loopback. Las instalaciones
@@ -62,7 +64,9 @@ y no representa una nota persistida. Canal 0–15 y programa 0–127; piano GM =
 La afinación expresiva/pitch bend, cambios de tempo y controladores quedan fuera de v1.
 Los solapamientos son válidos. No se cuantiza ni redondea al cargar.
 En tempo constante: segundos = ticks × 60 / (ppq × tempoBpm).
-Esto documenta unidades; aún no implementa conversión ni exportación MIDI.
+La conversión implementada redondea al tick más cercano, con empates hacia arriba;
+limita notas a la duración de análisis y asegura al menos un tick. Exporta SMF0.
+La UI M01-A limita tempo a 40–240 BPM, PPQ a 480 y compás a 4/4.
 
 `sourceAudioId` es opcional en cada pista; si existe debe resolver a un asset.
 IDs de assets y pistas son únicos en sus respectivas colecciones; IDs de notas
@@ -80,10 +84,31 @@ derivados separados para resampling y conversión mono, manteniendo la fuente.
 
 Rutas con `/`, relativas a la carpeta del proyecto; se rechazan rutas absolutas,
 UNC, traversal, barras inversas, segmentos vacíos, nombres reservados de Windows
-y caracteres no portables. El futuro host debe resolver rutas, comprobar que
-permanecen dentro del proyecto (incluyendo enlaces/reparse points), verificar
-existencia y contenido real. El contrato no comprueba archivos ni garantiza
-que los metadatos coincidan con sus bytes. No hay persistencia implementada.
+y caracteres no portables. El contrato por sí solo no comprueba archivos.
+El host M01-A valida proyectos propios con UUID, una pista y un original;
+rechaza reparse points y escapes. No es un importador arbitrario del formato.
+La metadata de fuente refleja su decodificación Web Audio (sample rate del
+contexto y canales decodificados), no una inspección del header comprimido.
+
+## Guardado y ejecución M01-A
+
+Cada toma se conserva en `projects/<UUID>` bajo el workspace compilado:
+`audio/original.webm|ogg|wav`, `audio/analysis.wav`, `project.json` y `melody.mid`.
+El original se crea una vez. El derivado es mono PCM16 de máximo 30 s; el
+original puede conservar hasta 32 s por colas del codec y demora de stop.
+El host valida duración, RIFF/PCM, IDs, notas y tamaño máximo de 16 MiB por audio.
+
+Se ejecuta sólo el Python/worker del workspace, sin shell ni servidor HTTP.
+Cada intento crea `job-<UUID>` con resultados y log. Timeout: 180 s. Cancelar
+o cerrar mata y recoge el hijo antes de liberar el trabajo. Los originales
+y los diagnósticos se conservan, también ante errores.
+
+JSON y MIDI se reemplazan atómicamente por archivo; se intenta revertir el
+MIDI si falla JSON. No hay transacción conjunta frente a corte de energía.
+La UI exporta MIDI desde las notas del JSON, que es el estado autoritativo.
+La biblioteca abre tomas propias; selección de carpeta, importación externa,
+edición de notas, gestión de espacio y coordinación multiinstancia están pendientes.
+El runtime depende de rutas del workspace de desarrollo; falta el empaquetado final.
 
 ## Decisiones y alternativas
 
@@ -95,10 +120,13 @@ Se conserva audio por archivos frente a base64 en JSON para evitar inflación
 y permitir derivados. La carpeta exige diseñar guardado atómico y traslado;
 un contenedor ZIP queda diferido, no se presenta como soporte actual.
 
-Se reserva Python 3.11 x64 como candidato para Basic Pitch 0.4.0. No usar los
-Python 3.12/3.14 locales para forzar una combinación sin soporte. No se instala
-el motor ni se simula su resultado. La app final deberá incluir runtime y modelo
-locales: exigir Python instalado al usuario final no cumple la independencia prevista.
+Se verificó Python 3.11.15 x64 con Basic Pitch 0.4.0, TensorFlow CPU 2.14.0,
+NumPy 1.26.4 y setuptools 81.0.0. El entorno se instala en el proyecto y usa
+el modelo local de Basic Pitch; las pruebas no simulan su inferencia.
+No usar los Python 3.12/3.14 locales para forzar otra combinación sin soporte.
+La app final deberá incluir runtime y modelo locales: exigir Python instalado
+al usuario final no cumple la independencia prevista. El bootstrap con uv
+es una herramienta de desarrollo, no una solución de distribución final.
 
 ## Criterios del siguiente hito
 

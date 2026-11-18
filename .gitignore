@@ -1,7 +1,10 @@
 node_modules/
 dist/
 src-tauri/target/
+src-tauri/gen/schemas/
 .venv/
+.tools/
+.cache/
 __pycache__/
 *.py[cod]
 .pytest_cache/

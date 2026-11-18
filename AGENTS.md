@@ -4,8 +4,9 @@
 
 - Objetivo: Windows 11, Tauri 2, React/TypeScript, Python + Spotify Basic Pitch
   local y reproducción Tone.js. Leer `docs/ARCHITECTURE.md` y `docs/STATUS.md`.
-- Esta base no implementa reconocimiento vocal, percusión ni armonización.
-  No añadir esas funciones fuera de un hito solicitado.
+- M01-A integra captura, transcripción local, PPQ/MIDI y piano. Ver
+  `docs/M01-A-TESTING.md`: la aceptación con voz real está pendiente.
+  No añadir percusión ni armonización fuera de un hito solicitado.
 - No hacer commits, push, publicación ni instalar dependencias globales sin autorización.
 - No modificar configuración externa. Dependencias JS locales con `npm ci`;
   Python futuro en `.venv` dentro del proyecto. No ejecutar `pip` global.
@@ -29,7 +30,7 @@
   como tiempo de notas. No destruir originales para crear derivados.
 - No cambiar silenciosamente schemaVersion ni migrar sobre el único original.
 - Dependencias directas con versión exacta y `package-lock.json` actualizado.
-  Cargo.lock está pendiente: generarlo y conservarlo al disponer de Rust, antes de release.
+  Conservar `src-tauri/Cargo.lock`; para Rust aislado en este equipo ver `docs/LOCAL-TOOLS.md`.
 - No agregar permisos amplios, shell genérico o acceso de red por comodidad.
 
 ## Cambios y verificación

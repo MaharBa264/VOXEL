@@ -1,0 +1,15 @@
+Salamander Grand Piano — Alexander Holm
+Instrumento muestreado: Yamaha C5.
+Licencia: Creative Commons Attribution 3.0 Unported (CC BY 3.0).
+https://creativecommons.org/licenses/by/3.0/
+
+Fuente de estos MP3: colección salamander de Tonejs/audio.
+https://github.com/Tonejs/audio/tree/efd8296360f9526e379bfbe5c1698ff54d6a1d34/salamander
+Aviso del autor y licencia:
+https://github.com/Tonejs/audio/blob/efd8296360f9526e379bfbe5c1698ff54d6a1d34/salamander/README
+
+VOXEL incluye sólo A2, A3, A4, A5 y A6, sin modificar los MP3 de esa fuente.
+El reproductor transpone esos samples para otras notas; es una selección
+reducida, sin todas las capas de velocidad, resonancias o pedales del original.
+Tone.js proporciona la distribución MP3; Alexander Holm es el autor de las grabaciones.
+Este aviso y la licencia corresponden a los samples, no asignan una licencia al código de VOXEL.

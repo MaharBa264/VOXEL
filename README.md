@@ -3,8 +3,31 @@
 Base de desarrollo de una aplicación local para Windows 11 que permitirá
 componer cantando, tarareando, silbando y grabando percusión.
 
-**Estado actual:** shell React/Tauri y contratos versionados. Aún no hay captura,
-transcripción, exportación MIDI, reproducción ni persistencia de proyectos.
+**Estado actual:** M01-A implementado en desarrollo: grabación corta, audio
+original conservado, transcripción local con Basic Pitch, notas PPQ, piano
+muestreado local, descarga MIDI y recuperación de tomas. El flujo nativo pasó
+con entrada sintética; falta aceptar el resultado con micrófono y escucha reales.
+
+## Probar una melodía en este equipo
+
+```powershell
+Set-Location D:\Proyectos\VOXEL
+npm.cmd run desktop:dev:local
+```
+
+1. Elegí el tempo de la próxima toma (40–240 BPM) y pulsá **Grabar melodía**.
+2. Permití el micrófono, cantá o tarareá una sola línea sin acompañamiento
+   y pulsá **Detener grabación**. Se detiene automáticamente a los 30 segundos.
+3. Pulsá **Transcribir melodía**. La primera ejecución puede tardar;
+   **Cancelar transcripción** detiene el proceso y conserva el proyecto anterior.
+4. Usá **Escuchar piano**, **Descargar MIDI** o el reproductor del original.
+5. Desde **Proyecto guardado → Abrir**, recuperá audio y notas después de reiniciar.
+
+Las tomas se guardan en `projects/<UUID>` dentro de este workspace en D:.
+Cada grabación crea un proyecto nuevo; las notas no se editan manualmente todavía.
+El tempo de una toma guardada queda fijado. La vista `npm run dev` en el
+navegador muestra la interfaz, pero exige la app nativa para estos flujos.
+Esta versión de desarrollo necesita el workspace y `.venv`; no es un instalador independiente.
 
 Repositorio: [MaharBa264/VOXEL](https://github.com/MaharBa264/VOXEL).
 La carpeta de trabajo de este equipo es `D:\Proyectos\VOXEL`.
@@ -55,7 +78,11 @@ equipo, investigar el paquete exacto antes de modificar la política local.
 Requisitos externos que el proyecto **no instala ni modifica**: Rust estable ≥1.90
 con target MSVC x64 y Cargo, Microsoft C++ Build Tools/Windows SDK y WebView2.
 Consultar [prerrequisitos oficiales](https://v2.tauri.app/start/prerequisites/).
-El diagnóstico local detectó MSVC y WebView2, pero no Rust/Cargo.
+El diagnóstico inicial detectó MSVC y WebView2, pero no Rust/Cargo en PATH.
+Ahora existe una instalación de Rust local al proyecto en D:, con
+[instrucciones propias](docs/LOCAL-TOOLS.md). En esta copia usar
+`npm.cmd run desktop:dev:local`; los comandos siguientes son la alternativa
+para un entorno que ya tenga Rust disponible en PATH.
 
 Cuando un entorno autorizado ya disponga de esas herramientas:
 
@@ -64,7 +91,6 @@ npm.cmd run tauri -- info
 rustc --version
 cargo --version
 Push-Location src-tauri
-cargo generate-lockfile
 cargo check --locked
 cargo test --locked
 Pop-Location
@@ -72,10 +98,9 @@ npm.cmd run desktop:dev
 npm.cmd run desktop:build
 ```
 
-Generar y revisar `src-tauri/Cargo.lock` una vez y conservarlo para futuras
-ejecuciones; no regenerarlo rutinariamente. Esta etapa no tiene lock Rust
-porque Cargo no está disponible. El procedimiento nativo está documentado,
-**no verificado**. `desktop:build` solicita el ejecutable sin instalador;
+Conservar `src-tauri/Cargo.lock`, generado al resolver las dependencias con
+la instalación local de Rust; no regenerarlo rutinariamente. Consultar
+`docs/STATUS.md` para los resultados nativos reales. `desktop:build` solicita el ejecutable sin instalador;
 el bundling está desactivado hasta diseñar distribución y runtime Python.
 
 ## Contratos y documentación
@@ -84,10 +109,12 @@ el bundling está desactivado hasta diseñar distribución y runtime Python.
 - [Dependencias, compatibilidad y riesgos](docs/DEPENDENCIES.md)
 - [Resultados y archivos de esta entrega](docs/STATUS.md)
 - [Desarrollo, Git y verificaciones](docs/DEVELOPMENT.md)
+- [Rust local en D: y comandos de escritorio](docs/LOCAL-TOOLS.md)
 - [Hitos y criterios de aceptación](docs/ROADMAP.md)
+- [Pruebas y aceptación manual de M01-A](docs/M01-A-TESTING.md)
 - [Reglas para agentes](AGENTS.md)
 - [Ejemplo vacío](examples/empty-project.json)
-- [Motor Python pendiente](python/README.md)
+- [Entorno Basic Pitch y prueba de inferencia local](python/README.md)
 
 `src/domain/project.ts` define los contratos. Tras cambiarlos, ejecutar:
 
@@ -99,4 +126,5 @@ npm.cmd run check
 Los esquemas en `schemas/` son generados; las pruebas detectan desincronización.
 No hay licencia de distribución asignada al proyecto todavía. La publicación
 inicial en GitHub fue autorizada por el usuario; el historial Git registra los
-commits efectivos. El siguiente hito será **M01-A**, aún pendiente.
+commits efectivos. Los cambios posteriores de M01-A siguen locales, sin commits
+ni push nuevos. La aceptación manual de M01-A está pendiente.

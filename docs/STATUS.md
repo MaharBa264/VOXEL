@@ -4,12 +4,17 @@
 
 - Carpeta activa: `D:\Proyectos\VOXEL`; selección en Codex confirmada por el usuario.
 - Repositorio canónico: https://github.com/MaharBa264/VOXEL.
-- Base local: contratos v1, shell React/Tauri, pruebas y documentación.
+- Base local: contratos v1 e integración M01-A de desarrollo, con pruebas y documentación.
 - Publicación inicial autorizada por el usuario el 2026-11-17. Se inicializó
   Git local en D: y se configuró ese repositorio como `origin`; el historial
   de `main` y la comprobación de SHA local/remoto acreditan la publicación efectiva.
-- Sin reconocimiento, percusión, armonización, grabación o reproducción implementados.
-- Rust/Cargo y Python 3.11/Basic Pitch siguen pendientes; no hay validación nativa.
+- Captura, transcripción local, MIDI, piano y persistencia implementados.
+  Sin percusión, armonización ni edición de notas.
+- Rust/Cargo 1.100.0 locales en D:; Cargo.lock generado y build Windows debug comprobado.
+- Apertura visual del shell confirmada por captura del usuario.
+- Flujo nativo completo comprobado con señal sintética, incluido piano y descarga.
+  Micrófono físico, escucha y precisión vocal requieren aceptación manual.
+- Cambios M01-A locales; GitHub conserva la publicación inicial.
 
 Las secciones siguientes conservan la evidencia histórica de cada etapa.
 
@@ -54,7 +59,7 @@ audio, proyecto vacío, versión/campos desconocidos, entradas inválidas, rutas
 IDs duplicados, referencias ausentes, esquemas generados y estructura Tauri.
 La serialización probada es JSON en memoria, no guardado/reapertura desde disco.
 
-No se ejecutaron `cargo check`, `cargo test`, ejecutable Windows, instalador,
+En la primera entrega no se ejecutaron `cargo check`, `cargo test`, ejecutable Windows, instalador,
 interfaz en navegador real, grabación, inferencia Python ni reproducción Tone.
 El smoke HTTP no ejecuta React ni evalúa permisos, CSP o Web Audio en WebView2.
 La configuración nativa se valida contra el esquema instalado; esto no prueba
@@ -107,14 +112,12 @@ Los esquemas y el ICO sí se conservan; el icono se regenera con
 
 ## Pendientes
 
-- Disponer de Rust/Cargo en un entorno autorizado; generar y revisar
-  `src-tauri/Cargo.lock`, compilar y abrir el shell Windows.
-- Validar un entorno Python 3.11/Basic Pitch 0.4.0 y fijar sus transitivas.
+- Build release, instalador y prueba del mínimo Rust 1.90 no ejecutados.
+- Validar voz real, micrófono físico y escucha del flujo integrado.
 - Diseñar runtime Python/modelo empaquetados, instalador, licencias y firma.
-- M01-A completo: captura real, originales conservados, transcripción local,
-  conversión PPQ/MIDI y piano con recursos locales, con pruebas sin conexión.
-- Persistencia atómica, validación real de rutas/archivos y migraciones cuando
-  se implemente almacenamiento; no están resueltas por este contrato.
+- Completar aceptación manual M01-A y prueba del equipo físicamente desconectado.
+- Recuperación ante corte de energía entre JSON/MIDI, migraciones y almacenamiento
+  final fuera del workspace; el guardado actual es atómico por archivo.
 
 Decisiones y problemas detallados en `ARCHITECTURE.md` y `DEPENDENCIES.md`.
 
@@ -167,3 +170,184 @@ Verificación previa a publicar, ejecutada desde D: el 2026-11-17:
 | `Test-Path` del original en C: | `True`: sigue presente; la selección en Codex no lo eliminó |
 
 La verificación nativa continúa pendiente; esta publicación no la reemplaza.
+
+## Continuación: formatos Ajv y compilación nativa — 2026-11-17
+
+El usuario ejecutó `npm ci`, `check`, `smoke:web` y `dev` desde D:.
+Su salida mostró las 43 pruebas iniciales y build correctos, con avisos
+`unknown format` en el test de configuración Tauri. La causa era Ajv sin los
+formatos del esquema de terceros: `strict: false` permitía ignorarlos.
+Las nuevas pruebas reprodujeron la aceptación incorrecta de URI, UUID,
+enteros sin signo, NaN y formatos desconocidos (10 fallos de 18 casos).
+
+Se añadió `ajv-formats@3.0.1` como dependencia de desarrollo, validadores
+uint8/uint32 y `strictSchema`/`strictNumbers`. No se silenció el logger ni
+se desactivó `validateFormats`. La suite pasa ahora 57 pruebas.
+
+Como faltaba Rust, se preparó un toolchain aislado en `.tools/cargo` y
+`.tools/rustup`, con temporales en `.cache/tmp`, todos dentro de D: e
+ignorados por Git. El instalador oficial se ejecutó con perfil mínimo y
+`--no-modify-path`; no se añadió Rust al PATH persistente ni al cargo del usuario.
+SHA-256 verificado del instalador:
+`38027d51d69a5d05493627a0634dbea52d6cd793c8f072d2373d3f4163eec7db`.
+La primera lectura del hash trató una respuesta binaria como texto y falló;
+se corrigió guardando el archivo SHA-256 y leyéndolo como texto antes de ejecutar.
+
+Se añadieron `scripts/local-rust.mjs`, comandos npm locales y
+`docs/LOCAL-TOOLS.md`. El wrapper limita los comandos a cargo/rustc/rustup/Tauri,
+configura el entorno del proceso hijo y no cambia el PATH del sistema.
+Cargo.lock fija la resolución de 427 paquetes de la primera compilación.
+
+| Comando / comprobación | Resultado |
+| --- | --- |
+| Regresiones nuevas antes de la corrección | Código 1: 10 fallos y 8 casos correctos en tests de artefactos |
+| `npm.cmd ci --no-fund --no-audit` | Código 0: 64 paquetes; advertencia de esbuild postinstall bloqueado conservada |
+| `npm.cmd run check` tras reinstalar | Código 0: tipos, 57 pruebas y build web, sin avisos de formatos ignorados |
+| `npm.cmd run smoke:web` | Código 0 |
+| `npm.cmd audit` | Código 0: 0 vulnerabilidades conocidas |
+| `node scripts/local-rust.mjs rustc --version` | Código 0: rustc 1.100.0 (0ef1bc386 2026-11-09) |
+| `node scripts/local-rust.mjs cargo --version` | Código 0: cargo 1.100.0 (3acc79c0c 2026-11-05) |
+| `node scripts/local-rust.mjs cargo check --manifest-path src-tauri/Cargo.toml` | Código 0; generó Cargo.lock |
+| `node scripts/local-rust.mjs cargo test --locked --manifest-path src-tauri/Cargo.toml` | Código 0; 0 tests Rust definidos, no es cobertura funcional |
+| `npm.cmd run desktop:build:local -- --debug` | Código 0: generó `src-tauri/target/debug/voxel.exe` |
+| `node --check scripts/local-rust.mjs` | Código 0: sintaxis correcta |
+| Wrapper con comando no permitido | Código 1 esperado; mostró uso y no ejecutó ese comando |
+| `git check-ignore` de herramientas, caches, target y schemas auxiliares | Código 0: excluidos |
+| Comprobación del cargo del usuario | No existe `C:\Users\amedina\.cargo\bin\cargo.exe` tras la instalación local |
+
+Todavía no se abrió ni inspeccionó visualmente el ejecutable. No se probaron
+micrófono, permisos, inferencia Python ni salida de audio. El postinstall de
+esbuild sigue bloqueado; no impidió los comandos verificados y no se aprobó
+su ejecución. Python 3.11/Basic Pitch es el siguiente prerrequisito de M01-A.
+Los cambios de esta continuación quedan locales, sin nuevos commits ni push.
+
+## Ventana nativa y runtime Basic Pitch — 2026-11-17
+
+El usuario aportó una captura que muestra la ventana nativa VOXEL con el
+contenido del shell correctamente visible. Se registra como comprobación
+visual manual; no implica que se hayan probado permisos del micrófono o audio.
+
+Se usó uv 0.12.3 ya instalado para descargar CPython standalone 3.11.15 x64
+a `.tools/python` con `--no-bin --no-registry` y crear `.venv` en D:.
+No se cambió PATH ni la selección del launcher `py`; `py --list-paths` siguió
+mostrando sólo los Python 3.12/3.14 previos.
+
+La primera resolución de 66 paquetes instaló Basic Pitch 0.4.0, TensorFlow
+2.14.0 y NumPy 2.4.6. El primer smoke falló en setUpClass por ABI NumPy
+(`_ARRAY_API not found`, código 1, 0 tests ejecutados). Tras fijar NumPy
+1.26.4, falló por `ModuleNotFoundError: pkg_resources` desde resampy 0.4.2
+(código 1, 0 tests). Se fijó setuptools 81.0.0 y se regeneró el lock con hashes.
+Las dos inferencias reales pasaron sin modificar los paquetes de terceros.
+
+Archivos nuevos de esta etapa: `python/requirements.in`,
+`python/requirements-windows-py311.txt`, `python/test_runtime.py` y
+`scripts/local-python.mjs`. Se añadieron los comandos npm `python:setup`,
+`python:check` y `test:python`, y se actualizó la documentación existente.
+Herramientas, entorno, caches, WAV y MIDI de prueba permanecen ignorados.
+
+| Comando / comprobación | Resultado |
+| --- | --- |
+| `uv python install 3.11 --no-bin --no-registry --no-config` con directorios locales | Código 0: CPython 3.11.15 x64 en D: |
+| `uv venv .venv --python 3.11 --managed-python --no-config` | Código 0 |
+| Compilación del lock y sync con `--require-hashes` | Código 0: 66 paquetes con versiones y hashes |
+| `npm.cmd run python:setup` tras fijar compatibilidad | Código 0: Python existente y sync del lock, sin sustituir .venv |
+| `npm.cmd run python:check` | Código 0: 66 paquetes compatibles según metadatos |
+| `npm.cmd run test:python` con la combinación corregida | Código 0: 2 tests reales pasaron |
+| `npm.cmd run check` | Código 0: 57 tests JS, TypeScript y build web |
+| `node --check scripts/local-python.mjs` | Código 0 |
+
+Resultados de inferencia: silencio de 2,5 s → cero eventos; La4 sintética de
+440 Hz con armónicos → un evento de pitch MIDI 69. Los MIDI se escribieron
+y reabrieron; los hashes de los WAV originales permanecieron iguales.
+Los hashes de los tres archivos del modelo y resultados están en
+`.cache/basic-pitch-smoke/report.json`, junto a WAV/MIDI generados localmente.
+Se bloquearon funciones de socket de Python durante importación e inferencia;
+se observaron cero intentos. Esto no es aislamiento de red a nivel del SO.
+
+Advertencias conservadas: backends alternativos no instalados, APIs
+deprecadas y una división inválida del postprocesador de Basic Pitch sobre
+silencio. No impidieron los asserts de tensores finitos y cero notas; el
+flujo de producto debe tratar silencio explícitamente. No hay auditoría
+Python ni prueba física sin conexión. No se midió calidad vocal o latencia.
+
+Siguiente trabajo: captura real y originales conservados, protocolo Rust↔Python,
+adaptación a PPQ, exportación MIDI de VOXEL y piano local. Esta etapa no
+implementa esos flujos y no completa M01-A. Sin nuevos commits ni push.
+
+## Integración M01-A — 2026-11-17
+
+Se implementó el recorrido de desarrollo de extremo a extremo: MediaRecorder,
+original inmutable, WAV mono PCM16 derivado, proyecto JSON v1, worker Python
+local CPU, PPQ y SMF0, piano Tone.Sampler y recuperación de tomas. La captura
+es de máximo 30 s; el original admite hasta 32 s por colas del codec. Su
+metadata describe el audio decodificado; el WAV de análisis se limita a 30 s.
+
+El host sólo acepta IDs de proyecto canónicos y rutas propias del workspace.
+Valida tamaños, WAV, notas, referencias y reparse points. Un trabajo exclusivo
+puede cancelarse, tiene timeout de 180 s y se recoge al cerrar. El JSON se
+reemplaza atómicamente en Windows; MIDI tiene rollback si falla JSON, sin
+garantía de transacción conjunta ante corte de energía. Originales no se reemplazan.
+
+Archivos de producto nuevos: `src-tauri/src/host.rs`, `python/transcribe.py`,
+`src/audio/capture.ts`, `src/audio/wav.ts`, `src/audio/midi.ts`,
+`src/audio/piano.ts`, `src/services/projects.ts` y `public/piano/` con cinco
+samples, atribución y manifiesto de hashes. Se actualizaron App/CSS, main.rs,
+Cargo.toml/lock, CSP, scripts npm y documentación. El esquema de proyecto v1
+no cambió. IPC y pruebas se describen en `M01-A-DESIGN.md`/`M01-A-TESTING.md`.
+
+Pruebas nuevas: `python/test_transcribe.py`, `tests/audio.test.ts`,
+`tests/app.test.tsx`, `tests/piano-assets.test.ts`, tests del host Rust y
+`scripts/test-desktop.mjs`. Playwright 1.65.1 se instaló sólo como dependencia
+local de desarrollo; usa WebView2 ya instalado, sin descarga de navegador.
+Rustfmt se agregó sólo al toolchain local para verificar formato Rust.
+
+| Verificación final | Resultado |
+| --- | --- |
+| `npm.cmd run check` | Código 0: 69 pruebas, TypeScript y build web |
+| `npm.cmd run test:python` | Código 0: 7 pruebas; incluye modelo real y CLI worker |
+| `cargo test --locked` mediante wrapper local | Código 0: 12 pruebas, incluidas inferencia real, cancelación, rollback y reparse points |
+| cargo check / cargo fmt --check | Código 0 en el entorno local |
+| `npm.cmd run desktop:build:local -- --debug` | Código 0, ejecutable Windows con recursos locales |
+| `npm.cmd run test:desktop` | Código 0: recorrido real WebView2/Tauri/Python/Tone con stream sintético |
+| MIDI descargado desde la UI abierto con mido | PPQ 480; pitch, velocity, inicio y final coinciden con JSON |
+| Samples MP3 | Cinco decodificados con soundfile y hashes verificados por la suite JS |
+| `npm audit --omit=dev` | Código 0: 0 vulnerabilidades conocidas |
+| Auditoría npm completa | Código 1: 6 entradas altas derivadas de picomatch, sin parche publicado; ver DEPENDENCIES |
+| Revisión independiente de código | Sin hallazgos críticos/importantes después de correcciones |
+
+El E2E sustituyó sólo getUserMedia por un MediaStream real sintetizado con
+oscilador de 440 Hz, sin abrir micrófono físico. Probó denegación de permiso,
+cancelación con stream tardío, captura WebM, liberación de tracks, guardado,
+inferencia real, PPQ/MIDI, señal de piano no nula, parada, descarga de MIDI,
+cancelación conservando JSON y recuperación de audio/notas. No hubo errores
+de página/consola ni solicitudes externas de la página.
+
+Informe final de ese recorrido:
+`.cache/desktop-test/0a0ac139-2a66-4537-9ae6-9f159165f0ca/report.json`.
+Nota observada: MIDI69, velocity113, startTick22, durationTicks2197. La señal
+Web Audio del piano superó el umbral de prueba; eso no acredita escucha humana.
+Se inspeccionó la captura `studio.png` del E2E anterior exitoso
+`d1d049d7-e8e7-4ab5-9d2c-2095c7ffd6f0`, sin solapamientos visibles.
+
+Problemas encontrados y corregidos:
+
+- Una CSP sin worker-src bloqueaba el worker blob del reloj Tone y dejaba el
+  piano sin señal. El E2E falló; se agregó únicamente `worker-src 'self' blob:`
+  en desarrollo/producción y la señal del piano pasó la prueba.
+- La primera instrumentación del stream sintético intentaba cerrar dos veces
+  su contexto; se corrigió su stop idempotente. No era un acceso al micrófono real.
+- La revisión detectó solicitud de permiso sin cancelar y riesgo de cancelar
+  un trabajo nuevo por un ack tardío. Se agregaron guardas y se verificaron en E2E.
+- Se alineó metadata de canales/duración original con el WAV derivado y se
+  probaron estéreo y colas del codec. Python acepta hasta 384 kHz como el host.
+- El guardado MIDI se revierte si falla el reemplazo JSON; prueba Windows real
+  con project.json de sólo lectura. No se borran tomas ni logs ante errores.
+
+Las primeras tres tomas sintéticas se movieron, sin borrarlas, a
+`.cache/desktop-test/legacy-synthetic-projects`. Las pruebas posteriores usan
+almacenamiento aislado debug por UUID, fuera de la biblioteca del usuario.
+
+Pendiente para aceptar M01-A: grabación física y calidad vocal, escucha humana,
+apertura en una DAW, reinicio manual y prueba del equipo desconectado. Build
+release, empaquetado Python/modelos y distribución independiente no realizados.
+No se hicieron commits, push ni publicaciones nuevas.

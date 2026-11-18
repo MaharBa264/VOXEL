@@ -20,7 +20,14 @@
     "check": "npm run typecheck && npm test && npm run build",
     "tauri": "tauri",
     "desktop:dev": "tauri dev",
-    "desktop:build": "tauri build --no-bundle"
+    "desktop:build": "tauri build --no-bundle",
+    "rust:local": "node scripts/local-rust.mjs",
+    "desktop:dev:local": "node scripts/local-rust.mjs tauri dev",
+    "desktop:build:local": "node scripts/local-rust.mjs tauri build --no-bundle",
+    "python:setup": "node scripts/local-python.mjs setup",
+    "python:check": "node scripts/local-python.mjs check",
+    "test:python": "node scripts/local-python.mjs test",
+    "test:desktop": "node scripts/test-desktop.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "2.12.5",
@@ -36,6 +43,8 @@
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.3.0",
     "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "playwright": "1.65.1",
     "tsx": "4.23.15",
     "typescript": "7.0.2",
     "vite": "8.3.8",

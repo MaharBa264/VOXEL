@@ -29,7 +29,7 @@ npm.cmd run smoke:web
 
 Versiones de referencia: Node 24.19.0 y npm 12.0.2. No instalar paquetes globales
 ni cambiar ExecutionPolicy. El smoke inicia su propio servidor: liberar antes
-el puerto 1420. `check` verifica tipos, 43 pruebas actuales y build web; el
+el puerto 1420. `check` verifica tipos, 69 pruebas actuales y build web; el
 número de pruebas puede aumentar al desarrollar nuevos hitos.
 
 La instalación necesita red para descargar paquetes. Esto no equivale a usar
@@ -47,8 +47,10 @@ registradas en [DEPENDENCIES.md](DEPENDENCIES.md).
 | `npm.cmd audit` | Avisos conocidos del árbol npm al consultar | Ausencia de fallos o validación de dependencias Python/Rust |
 | `npm.cmd run tauri -- info` | Diagnóstico del entorno | Build válido: puede retornar 0 con requisitos ausentes |
 
-Los comandos nativos del README siguen pendientes. No reemplazar el resultado
-de un build Windows por una validación de JSON ni por pruebas TypeScript.
+La integración M01-A ya compila en debug con Rust 1.100.0 y Cargo.lock;
+ver [herramientas locales](LOCAL-TOOLS.md) y [pruebas M01-A](M01-A-TESTING.md).
+El test WebView2 usa entrada sintética y los componentes reales; micrófono
+físico, escucha y build release requieren comprobaciones separadas.
 No se configuró CI en GitHub en esta entrega.
 
 ## Contratos y cambios
@@ -81,8 +83,8 @@ Antes de una publicación autorizada:
 
 `.gitignore` excluye dependencias, builds y datos de trabajo. `.gitattributes`
 normaliza texto a LF y conserva el ICO como binario. El lock npm, esquemas
-generados e icono provisional sí se versionan. Cargo.lock deberá añadirse
-cuando Cargo permita resolver y comprobar el proyecto.
+generados, icono provisional y Cargo.lock sí se versionan. `.tools`, `.cache`
+y esquemas auxiliares de Tauri en `src-tauri/gen/schemas` son artefactos locales ignorados.
 
 Sin licencia de proyecto elegida, esta publicación no asigna una licencia
 de código abierto ni resuelve las licencias de runtimes, modelos o piano.
