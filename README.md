@@ -3,6 +3,9 @@
 Base de desarrollo de una aplicación local para Windows 11 que permitirá
 componer cantando, tarareando, silbando y grabando percusión.
 
+La [visión de producto](docs/VISION.md) describe los flujos de composición
+multipista, desde una toma o desde una armonía.
+
 **Estado actual:** M01-A implementado en desarrollo: grabación corta, audio
 original conservado, transcripción local con Basic Pitch, notas PPQ, piano
 muestreado local, descarga MIDI y recuperación de tomas. El flujo nativo pasó
