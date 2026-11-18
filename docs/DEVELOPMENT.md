@@ -29,7 +29,7 @@ npm.cmd run smoke:web
 
 Versiones de referencia: Node 24.19.0 y npm 12.0.2. No instalar paquetes globales
 ni cambiar ExecutionPolicy. El smoke inicia su propio servidor: liberar antes
-el puerto 1420. `check` verifica tipos, 69 pruebas actuales y build web; el
+el puerto 1420. `check` verifica tipos, 76 pruebas actuales y build web; el
 número de pruebas puede aumentar al desarrollar nuevos hitos.
 
 La instalación necesita red para descargar paquetes. Esto no equivale a usar
@@ -67,9 +67,11 @@ la prueba actual de JSON en memoria no prueba persistencia en disco.
 
 ## Git y publicación
 
-El usuario autorizó la publicación inicial de la base y esta documentación en
-la rama `main` del repositorio vacío. Esa autorización no habilita futuros
-commits, push o releases sin un pedido que los incluya.
+Desde el 2026-11-18 el usuario autoriza commits y push normales del trabajo de
+VOXEL para mantener **todo cambio, corrección y propuesta en GitHub**. Se
+reemplaza la autorización anterior limitada a la publicación inicial. La
+publicación de propuestas no implica que estén aprobadas o implementadas.
+Releases, despliegues, instalaciones globales y force push quedan fuera.
 
 Antes de una publicación autorizada:
 
@@ -78,8 +80,19 @@ Antes de una publicación autorizada:
 3. Revisar los archivos incluidos: excluir grabaciones privadas, secretos,
    `node_modules`, `dist`, `.venv`, `target` y proyectos personales.
 4. Publicar sin force push y comprobar que el SHA esperado está en GitHub.
-5. Registrar en STATUS qué se verificó y qué quedó pendiente; entregar el
-   enlace al commit. No presentar la publicación como un release instalable.
+5. Registrar en STATUS qué se verificó y qué quedó pendiente; ejecutar
+   `npm.cmd run sync:check` y entregar el enlace al commit. No presentar la
+   publicación como un release instalable.
+
+Al empezar en otro equipo, consultar primero el remoto. Al terminar una unidad
+de trabajo, commit y envío forman parte de la tarea. Si el avance no pasa
+pruebas, publicarlo en una rama de trabajo con su estado claramente documentado.
+Si la conexión falla, guardar respaldo y explicar qué sigue sin sincronizar.
+No tratar un commit local o un resultado antiguo de fetch como confirmación remota.
+
+Las propuestas se registran en [docs/proposals](proposals/README.md) o en un
+diseño versionado. Mantener contexto, alternativas, estado y decisión, incluso
+si no se implementa código. No guardar nuevas ideas únicamente en el chat.
 
 `.gitignore` excluye dependencias, builds y datos de trabajo. `.gitattributes`
 normaliza texto a LF y conserva el ICO como binario. El lock npm, esquemas

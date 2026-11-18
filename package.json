@@ -27,7 +27,8 @@
     "python:setup": "node scripts/local-python.mjs setup",
     "python:check": "node scripts/local-python.mjs check",
     "test:python": "node scripts/local-python.mjs test",
-    "test:desktop": "node scripts/test-desktop.mjs"
+    "test:desktop": "node scripts/test-desktop.mjs",
+    "sync:check": "tsx scripts/check-sync.ts"
   },
   "dependencies": {
     "@tauri-apps/api": "2.12.5",

@@ -7,15 +7,40 @@
 - M01-A integra captura, transcripción local, PPQ/MIDI y piano. Ver
   `docs/M01-A-TESTING.md`: la aceptación con voz real está pendiente.
   No añadir percusión ni armonización fuera de un hito solicitado.
-- No hacer commits, push, publicación ni instalar dependencias globales sin autorización.
+- El usuario autorizó el 2026-11-18 mantener en GitHub todos los cambios,
+  correcciones y propuestas de VOXEL. Esta autorización cubre commits y push
+  normales del trabajo del proyecto, sin pedir confirmación cada vez.
+- No instalar dependencias globales ni publicar releases/desplegar aplicaciones
+  sin autorización específica. No hacer force push ni reescribir historial ajeno.
 - No modificar configuración externa. Dependencias JS locales con `npm ci`;
   Python futuro en `.venv` dentro del proyecto. No ejecutar `pip` global.
 - No enviar grabaciones ni transcripciones a servicios externos.
 - Carpeta activa en este equipo: `D:\Proyectos\VOXEL`. La copia anterior en C:
   no es la carpeta de desarrollo; ejecutar comandos en D: explícitamente.
 - Repositorio canónico: `https://github.com/MaharBa264/VOXEL.git`.
-  La autorización de esta sesión cubre la publicación inicial de la base y
-  su documentación. No implica permiso permanente para commits o pushes futuros.
+  GitHub es el registro compartido del trabajo entre equipos. No considerar
+  terminada una tarea mientras sus cambios y decisiones existan sólo localmente.
+
+## Sincronización obligatoria entre equipos
+
+- Al empezar: ejecutar fetch y revisar estado, diferencias y upstream antes
+  de editar. Integrar cambios remotos preservando modificaciones locales.
+- Mantener cambios acotados. Ejecutar comprobaciones aplicables, registrar
+  resultados y limitaciones, crear commit y enviarlo a GitHub al cerrar cada
+  unidad de trabajo. No acumular trabajo únicamente en un equipo.
+- Registrar también propuestas no implementadas en `docs/proposals/` o en
+  un documento de diseño, con estado explícito, contexto y decisión pendiente.
+  Publicarlas como propuestas; no presentarlas como aprobadas o implementadas.
+- Si las pruebas fallan, conservar el avance en una rama de trabajo publicada
+  y documentar el fallo. No presentar esa rama como una entrega validada.
+- Antes de cerrar la tarea: ejecutar `npm.cmd run sync:check`. Debe confirmar
+  árbol limpio y HEAD igual al upstream recién consultado. Entregar el enlace
+  al commit o rama publicada. Commit local sin envío no equivale a sincronizar.
+- Si GitHub o la conexión fallan, conservar respaldo local y reportar claramente
+  qué no se pudo enviar; no afirmar que se publicó. Reintentar cuando sea viable.
+- Nunca incluir credenciales, grabaciones privadas, proyectos personales,
+  dependencias, caches o builds ignorados. Sincronizar fuentes, contratos,
+  documentación y tests, con sus locks y recursos redistribuibles.
 
 ## Código y contratos
 

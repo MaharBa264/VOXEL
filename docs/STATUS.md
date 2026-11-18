@@ -14,7 +14,8 @@
 - Apertura visual del shell confirmada por captura del usuario.
 - Flujo nativo completo comprobado con señal sintética, incluido piano y descarga.
   Micrófono físico, escucha y precisión vocal requieren aceptación manual.
-- Cambios M01-A locales; GitHub conserva la publicación inicial.
+- Se retoma la copia M01-A de D: y se publica su respaldo en GitHub por nueva
+  instrucción permanente del usuario del 2026-11-18. Ver registro de sincronización abajo.
 
 Las secciones siguientes conservan la evidencia histórica de cada etapa.
 
@@ -351,3 +352,50 @@ Pendiente para aceptar M01-A: grabación física y calidad vocal, escucha humana
 apertura en una DAW, reinicio manual y prueba del equipo desconectado. Build
 release, empaquetado Python/modelos y distribución independiente no realizados.
 No se hicieron commits, push ni publicaciones nuevas.
+
+## Retoma y política permanente de sincronización — 2026-11-18
+
+El usuario informó que el trabajo de otro equipo posiblemente no se había
+sincronizado. Un fetch confirmó que origin/main seguía en 451ccbb y no había
+ramas remotas adicionales para recuperar ese trabajo. Se continúa desde la
+copia disponible en D:, sin afirmar que se recuperaron cambios del otro equipo.
+
+Antes de modificar se respaldaron los 63 archivos fuente/configuración/recursos,
+con hashes y diff, en `.cache/backups/2026-11-18-before-github-sync` (ignorado).
+La implementación M01-A disponible se conserva en el commit
+[e97cdef](https://github.com/MaharBa264/VOXEL/commit/e97cdef81a36efcc11b9662662ebb6c7826da95b).
+
+La nueva instrucción autoriza commits y push normales de cambios, correcciones
+y propuestas. AGENTS y DEVELOPMENT exigen revisar el remoto al empezar,
+registrar resultados y publicar cada unidad de trabajo antes de cerrarla.
+Las propuestas llevan estado explícito en docs/proposals o documentos de diseño.
+No se publican grabaciones privadas, dependencias, caches ni builds.
+
+Se incorporó `npm.cmd run sync:check`: consulta origin y falla ante archivos
+modificados/nuevos, commits sin enviar, remoto adelantado, divergencia o falta
+de upstream. Sólo inspecciona; no crea commits ni integra ni envía cambios.
+
+Verificación ejecutada en esta retoma:
+
+| Comprobación | Resultado |
+| --- | --- |
+| npm.cmd run check | Código 0: TypeScript, 76 pruebas JS y build web |
+| npm.cmd run test:python | Código 0: 7 pruebas |
+| node scripts/local-rust.mjs cargo test --locked --manifest-path src-tauri/Cargo.toml | Código 0: 12 pruebas |
+| sync:check antes de publicar | Código 1 esperado: detectó los cambios sólo locales |
+
+Las 7 pruebas nuevas usan repositorios Git locales reales y cubren sincronía,
+modificaciones, propuestas nuevas, commits sin enviar, remoto nuevo, divergencia
+y ausencia de upstream. En Windows necesitaron ampliar su timeout a 30 s.
+El respaldo dentro de .cache hizo que Vitest descubriese tests duplicados:
+se acotó el descubrimiento a tests/**/*.test.{ts,tsx}; luego pasó la suite completa.
+
+No se modificó el comportamiento musical en esta retoma ni se repitió el E2E
+nativo: su evidencia del 17/11 permanece arriba. Continúan pendientes voz real,
+escucha humana, DAW y aceptación desconectada. La auditoría de desarrollo
+mantiene el riesgo picomatch documentado en DEPENDENCIES.
+
+La publicación se realiza en dos commits (implementación recuperada localmente
+y política/verificación), conservando el historial. El cierre requiere ejecutar
+sync:check después del envío y confirmar árbol limpio e igualdad con origin/main;
+ese resultado se comunica con el enlace al commit publicado.

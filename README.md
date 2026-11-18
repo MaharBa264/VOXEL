@@ -126,5 +126,8 @@ npm.cmd run check
 Los esquemas en `schemas/` son generados; las pruebas detectan desincronización.
 No hay licencia de distribución asignada al proyecto todavía. La publicación
 inicial en GitHub fue autorizada por el usuario; el historial Git registra los
-commits efectivos. Los cambios posteriores de M01-A siguen locales, sin commits
-ni push nuevos. La aceptación manual de M01-A está pendiente.
+commits efectivos. Desde el 2026-11-18, por instrucción del usuario, cada cambio,
+corrección y propuesta debe quedar versionado y enviado a GitHub. Antes de
+cerrar una tarea ejecutar `npm.cmd run sync:check`: exige árbol limpio y HEAD
+igual al upstream recién consultado. Ver [flujo de trabajo](docs/DEVELOPMENT.md).
+La aceptación manual de M01-A está pendiente.

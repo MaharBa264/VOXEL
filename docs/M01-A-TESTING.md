@@ -18,7 +18,7 @@ npm.cmd run desktop:build:local -- --debug
 npm.cmd run test:desktop
 ```
 
-Resultados actuales: 69 casos JS, 7 Python y 12 Rust. Python/Rust llaman al
+Resultados actuales: 76 casos JS (69 M01-A y 7 de sincronización), 7 Python y 12 Rust. Python/Rust llaman al
 modelo real y pueden tardar. `smoke:web` sólo comprueba HTTP y transformación.
 
 `test:desktop` requiere debug actualizado y puerto loopback 9337 libre.
