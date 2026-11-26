@@ -154,11 +154,20 @@ def validate_paths(source, output, midi):
     return paths
 
 
-def transcribe(source, output, midi, tempo, ppq, monophonic=False):
+SUPPORTED_INPUT_KINDS = ('voice',)
+
+
+def validate_input_kind(value):
+    if value not in SUPPORTED_INPUT_KINDS:
+        raise ValueError('Unsupported input kind; only "voice" is supported by the local engine')
+
+
+def transcribe(source, output, midi, tempo, ppq, monophonic=False, input_kind='voice'):
     if not math.isfinite(tempo) or not 40 <= tempo <= 240:
         raise ValueError('Tempo must be finite and between 40 and 240 BPM')
     if isinstance(ppq, bool) or not isinstance(ppq, int) or not 1 <= ppq <= 32767:
         raise ValueError('PPQ must be an integer between 1 and 32767')
+    validate_input_kind(input_kind)
     source, output, midi = validate_paths(source, output, midi)
     configure_environment()
     duration, silence = read_audio(source)
@@ -194,9 +203,10 @@ def main():
     parser.add_argument('--tempo', required=True, type=float)
     parser.add_argument('--ppq', required=True, type=int)
     parser.add_argument('--monophonic', action='store_true')
+    parser.add_argument('--input-kind', default='voice')
     args = parser.parse_args()
     try:
-        transcribe(args.input, args.output, args.midi, args.tempo, args.ppq, args.monophonic)
+        transcribe(args.input, args.output, args.midi, args.tempo, args.ppq, args.monophonic, args.input_kind)
     except Exception as error:
         print(f'Transcription failed: {error}', file=sys.stderr)
         return 1

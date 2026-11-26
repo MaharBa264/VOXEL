@@ -131,6 +131,14 @@ class WorkerTests(unittest.TestCase):
             self.assertEqual(result, {'protocolVersion': 1, 'notes': [], 'silence': True})
 
 
+    def test_rejects_unsupported_input_kind(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / '.cache') as folder:
+            p = Path(folder); source = p / 'in.wav'
+            wav(source, [1] * 22050)
+            with self.assertRaises(ValueError):
+                self.worker.transcribe(source, p / 'out.json', p / 'out.mid', 120, 480, input_kind='percussion')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 

@@ -1,6 +1,9 @@
 # Selector del tipo de entrada: voz, silbido o percusión
 
-**Estado:** propuesta — solicitada por el usuario el 2026-11-26. No implementada.
+**Estado:** implementado en desarrollo el 2026-11-26 en su fase actual: selector
+disponible con opciones voz/tarareo, silbido y percusión, conectado al worker
+vía flag `--input-kind`; el motor actual atiende sólo `voice` y rechaza los
+demás con error claro. Ver [STATUS](../STATUS.md#metrónomo-conteo-audible-y-pulso-visual--2026-11-26).
 
 ## Problema y contexto
 
@@ -63,3 +66,21 @@ General MIDI o un `kind` de pista) y un editor distinto del piano.
 - ¿La percusión es una pista de percusión General MIDI o samples propios?
 - ¿El tipo de entrada se guarda en el proyecto o sólo selecciona el motor?
 - ¿Se admite cambiar el tipo después de grabar?
+
+## Resultado de la implementación
+
+Decisiones tomadas para esta unidad:
+
+- Se agregó el selector de tipo de entrada a la interfaz (voz/tarareo, silbido,
+  percusión) y se pasa al worker con el flag `--input-kind`.
+- El worker valida el valor y acepta sólo `voice`; los valores restantes
+  devuelven error explícito sin tocar la inferencia.
+- El tipo se envía por petición de transcripción, no se guarda en el proyecto
+  (el contrato v1 no varió).
+
+## Validación ejecutada
+
+- `npm.cmd run check`, `npm.cmd run test:python`, `cargo check/test` y el E2E
+  nativo en verde, con la transcripción de prueba usando el tipo soportado.
+- Pendiente: implementar motores para silbido y percusión y decidir dónde se
+  persisten.

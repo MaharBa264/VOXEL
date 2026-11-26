@@ -64,8 +64,10 @@ las otras tres siguen siendo propuestas:
   (interruptor, flag `--monophonic`, desactivado por defecto). Ver
   [propuesta](proposals/2026-11-26-monophonic-postprocess.md). La comparación con
   y sin filtro sobre toma real sigue pendiente.
-- [ ] Selector del tipo de entrada: voz/tarareo, silbido o percusión.
-  Ver [propuesta](proposals/2026-11-26-input-kind.md).
+- [x] Selector del tipo de entrada: voz/tarareo, silbido o percusión, conectado al
+  worker (voz soportada por el motor actual; los demás se validan y reportan como
+  no soportados). Ver [propuesta](proposals/2026-11-26-input-kind.md). Los motores
+  de silbido y percusión quedan como trabajo posterior.
 - [x] Metrónomo con conteo audible de un compás y pulso visual durante la toma,
   con interruptor y cancelación del conteo. Ver
   [propuesta](proposals/2026-11-26-metronome.md) y evidencia en

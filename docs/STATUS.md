@@ -108,6 +108,24 @@ Pendiente: comparar la misma toma real con y sin filtro antes de activar el
 interruptor por defecto. El filtro se activó en la prueba sintética con el modo
 off, por defecto.
 
+## Selector de tipo de entrada — 2026-11-26
+
+Unidad posterior a M01-A, en el orden acordado.
+
+Alcance implementado:
+
+- Selector en la interfaz con opciones voz/tarareo, silbido y percusión.
+- Petición de transcripción con tipo de entrada (plumbing `transcribe_take` →
+  worker con flag `--input-kind`).
+
+Comportamiento actual:
+
+- Sólo `voice` está soportado por el motor local; los valores `whistle` y
+  `percussion` se rechazan con error explícito y no llegan a inferencia.
+
+Pendiente: motores para silbido y percusión, y decisión sobre persistencia del
+tipo en el proyecto (el contrato v1 no varió).
+
 ## Aceptación manual M01-A — 2026-11-26
 
 El usuario aceptó M01-A con las limitaciones de transcripción documentadas más

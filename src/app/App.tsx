@@ -21,6 +21,7 @@ export function App() {
   const [tempo, setTempo] = useState('120');
   const [metronomeOn, setMetronomeOn] = useState(true);
   const [monophonic, setMonophonic] = useState(false);
+  const [inputKind, setInputKind] = useState('voice');
   const [beat, setBeat] = useState(-1);
   const [elapsed, setElapsed] = useState(0);
   const [project, setProject] = useState<Project>();
@@ -132,7 +133,7 @@ export function App() {
     if (!project || !native || phaseRef.current !== 'idle') return;
     audio.current?.pause(); setError(''); changePhase('transcribing');
     try {
-      const next = await projects.transcribeTake(project.id, monophonic);
+      const next = await projects.transcribeTake(project.id, monophonic, inputKind);
       if (!mounted.current) return;
       setProject(next); setNotice(next.tracks.some((track) => track.notes.length)
         ? 'Transcripción guardada. Escuchá las notas o descargá el MIDI.'
@@ -202,6 +203,13 @@ export function App() {
             {notes.map((note, index) => <rect key={`${note.id}-${index}`} x={ticksToSeconds(note.startTick, project.ppq, project.tempoBpm) / Math.max(duration, .1) * 590} y={112 - note.pitch / 127 * 104} width={Math.max(2, ticksToSeconds(note.durationTicks, project.ppq, project.tempoBpm) / Math.max(duration, .1) * 590)} height="5" rx="2" />)}
           </svg> : <div className="empty-notes"><span aria-hidden="true">♩</span><p>{project ? 'Audio listo para transcribir' : 'Todavía no hay una toma'}</p></div>}
         </div>
+        <label className="input-kind">Tipo de entrada para la transcripción <span>
+          <select aria-label="Tipo de entrada para la transcripción" value={inputKind} disabled={!native || !idle} onChange={(event) => setInputKind(event.target.value)}>
+            <option value="voice">Voz / tarareo</option>
+            <option value="whistle">Silbido</option>
+            <option value="percussion">Percusión</option>
+          </select>
+        </span></label>
         <div className="result-actions">
           {phase === 'transcribing' || phase === 'canceling' ? <button disabled={phase === 'canceling'} onClick={() => void cancel()}>{phase === 'canceling' ? 'Cancelando…' : 'Cancelar transcripción'}</button>
             : <button disabled={!native || !project || !idle} onClick={() => void transcribe()}>Transcribir melodía</button>}

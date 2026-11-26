@@ -11,7 +11,8 @@ transcripción documentadas en [STATUS](docs/STATUS.md): grabación corta, audio
 original conservado, transcripción local con Basic Pitch, notas PPQ, piano
 muestreado local, descarga MIDI y recuperación de tomas. Las unidades siguientes
 implementadas en desarrollo son el metrónomo con conteo audible y pulso visual,
-y el post-proceso monofónico opcional; las demás mejoras están registradas como
+el post-proceso monofónico opcional y el selector de tipo de entrada (voz
+soportada por el motor actual); las demás mejoras están registradas como
 [propuestas](docs/proposals/README.md) y todavía no están implementadas.
 
 ## Probar una melodía en este equipo

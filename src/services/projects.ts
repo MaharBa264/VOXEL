@@ -17,7 +17,7 @@ export async function listProjects(): Promise<{ id: string; name: string }[]> {
   return result as { id: string; name: string }[];
 }
 export async function loadProject(projectId: string) { return parseProject(await invoke('load_project', { projectId })); }
-export async function transcribeTake(projectId: string, monophonic: boolean) { return parseProject(await invoke('transcribe_take', { projectId, monophonic })); }
+export async function transcribeTake(projectId: string, monophonic: boolean, inputKind: string) { return parseProject(await invoke('transcribe_take', { projectId, monophonic, inputKind })); }
 export async function cancelTranscription() { await invoke('cancel_transcription'); }
 export async function originalAudio(projectId: string) {
   const result = await invoke<{ bytes: number[]; mimeType: string }>('get_original_audio', { projectId });
