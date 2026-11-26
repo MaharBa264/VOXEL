@@ -20,6 +20,11 @@
 - Metrónomo con conteo audible y pulso visual implementado en desarrollo el
   2026-11-26; ver la sección correspondiente. Sin cambios en el contrato v1 ni
   en la inferencia.
+- Compás configurable por toma, confirmado manualmente el 2026-11-26; ver la
+  sección correspondiente.
+- Backtracks por estilo: diseño por fases y primer corte propuestos en
+  [la propuesta](proposals/2026-11-26-style-backtracks.md). Sin implementar y
+  pendiente de aprobación del primer corte.
 
 ## Metrónomo: conteo audible y pulso visual — 2026-11-26
 
