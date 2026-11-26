@@ -22,7 +22,8 @@ con stream sintético. Build release, voz real y escucha humana siguen pendiente
 
 ## M01-A — grabar melodía, convertir a MIDI y reproducir piano
 
-Integración de desarrollo implementada; pendiente aceptación manual. Orden seguido:
+Integración implementada y aceptada manualmente el 2026-11-26 con las
+limitaciones registradas en [STATUS](STATUS.md). Orden seguido:
 
 1. **Preparar el entorno nativo.** Resolver Rust/Cargo y probar el shell Windows;
    validar Python 3.11 x64 con Basic Pitch 0.4.0 y fijar dependencias reales.
@@ -40,16 +41,32 @@ Integración de desarrollo implementada; pendiente aceptación manual. Orden seg
 
 Criterios de aceptación:
 
-- [ ] Una grabación de melodía real se conserva y puede recuperarse.
+- [x] Una grabación de melodía real se conserva y puede recuperarse.
 - [x] Inferencia local, errores visibles y cancelación verificados.
 - [x] Notas PPQ y MIDI legible, incluidos parser y descarga nativa.
-- [ ] La melodía se escucha con un piano cuyos recursos no dependen de CDN.
+- [x] La melodía se escucha con un piano cuyos recursos no dependen de CDN.
 - [x] Guardar y reabrir conserva notas y fuente en el test sintético nativo.
-- [ ] El flujo se prueba sin conexión una vez aprovisionadas las dependencias y el modelo.
+- [x] El flujo se prueba sin conexión una vez aprovisionadas las dependencias y el modelo.
 - [x] Se registran entorno, señal sintética, resultados y limitaciones.
 
-La precisión de transcripción, latencia y recursos del piano deben medirse:
-no hay cifras ni calidad garantizadas en esta etapa.
+La aceptación incluye límites conocidos: Basic Pitch descarta por defecto notas
+menores de 127,7 ms y puede agregar armónicos como notas extra; el silbido no
+está cubierto. El permiso denegado y la cancelación manual no se repitieron en
+la sesión de aceptación, aunque el E2E sintético ya los cubría. Ver el detalle
+en [STATUS](STATUS.md).
+
+## Propuestas posteriores a M01-A — 2026-11-26
+
+Solicitadas por el usuario; ninguna está implementada todavía:
+
+- [ ] Posproceso monofónico opcional para reducir armónicos y octavas duplicadas.
+  Ver [propuesta](proposals/2026-11-26-monophonic-postprocess.md).
+- [ ] Selector del tipo de entrada: voz/tarareo, silbido o percusión.
+  Ver [propuesta](proposals/2026-11-26-input-kind.md).
+- [ ] Metrónomo con conteo audible y marca visual del tempo.
+  Ver [propuesta](proposals/2026-11-26-metronome.md).
+- [ ] Armonías y backtracks por estilo (jazz, pop, rock, cumbia, cuarteto, folk)
+  a partir de una o varias tomas. Ver [propuesta](proposals/2026-11-26-style-backtracks.md).
 
 ## Fuera del alcance actual
 

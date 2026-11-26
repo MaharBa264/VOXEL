@@ -2,9 +2,11 @@
 
 ## Estado
 
-Integración implementada y comprobada en WebView2 con entrada sintética.
-La aceptación con micrófono físico, voz humana, escucha y equipo desconectado
-está pendiente. Sin percusión, armonización, edición de notas ni instalador.
+Integración implementada y aceptada manualmente el 2026-11-26 con las
+limitaciones registradas en [STATUS.md](STATUS.md): notas menores de 127,7 ms
+descartadas, armónicos agregados como notas y silbido no soportado. La
+cancelación manual y el permiso denegado no se repitieron en esa sesión; el E2E
+sintético anterior ya los cubría. Sin edición de notas ni instalador.
 
 ## Repetir pruebas
 

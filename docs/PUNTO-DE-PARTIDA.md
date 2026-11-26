@@ -2,6 +2,11 @@
 
 Revisión del 25 de noviembre de 2026.
 
+Actualización del 26 de noviembre: M01-A fue aceptado manualmente con las
+limitaciones de transcripción documentadas en [STATUS.md](STATUS.md). Las ideas
+posteriores están registradas como propuestas en [docs/proposals](proposals/README.md)
+y todavía no están implementadas.
+
 ## De dónde partimos
 
 VOXEL nació de una idea de composición por capas: cantar, tararear, silbar o marcar un ritmo con golpes y convertir esas tomas en material musical editable. El primer hito, M01-A, redujo esa idea a un recorrido concreto para Windows 11 x64: grabar una línea melódica, convertirla a MIDI, escucharla con un piano y poder recuperarla después.

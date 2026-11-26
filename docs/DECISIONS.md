@@ -10,6 +10,7 @@ está en el [roadmap](ROADMAP.md).
 | 2026-11-17 | Usar CPython 3.11 y Basic Pitch 0.4.0 para M01-A. | La combinación fijada permitió comprobar la inferencia local. |
 | 2026-11-18 | Usar GitHub como registro compartido de código, decisiones y propuestas. | Permite retomar desde otro equipo con los cambios y su contexto. Las propuestas abiertas viven en [docs/proposals](proposals/README.md). |
 | 2026-11-18 | Pausar funcionalidades nuevas hasta hacer la aceptación manual de M01-A. | El recorrido integrado ya pasó en WebView2 con audio simulado. El paso pendiente es probar el resultado con micrófono, oído y archivos reales. |
+| 2026-11-26 | Aceptar M01-A con las limitaciones de transcripción documentadas. | El recorrido manual con voz real, piano, MIDI en MuseScore, reapertura y prueba sin conexión pasó. El usuario aceptó los límites del modelo y pidió registrar propuestas posteriores. |
 
 ## Cierre de M01-A
 
@@ -26,3 +27,19 @@ empaquetado e instalador quedan para una decisión posterior.
 En la copia anterior de este equipo apareció un segundo WebM después de la
 prueba sintética conocida. Eso confirma un guardado adicional. Su origen y
 contenido audible no se verificaron, por lo que no acredita la aceptación.
+
+## M01-A aceptado — 2026-11-26
+
+La aceptación manual se completó con una melodía real y se registró en
+[STATUS.md](STATUS.md). El usuario aceptó explícitamente M01-A con estas
+limitaciones: Basic Pitch descarta por defecto notas menores de 127,7 ms, puede
+agregar armónicos como notas extra y no transcribe bien el silbido. La
+cancelación manual y el permiso denegado no se repitieron en esa sesión; el E2E
+sintético anterior ya los cubría.
+
+La aceptación habilita proponer el hito siguiente, no implementarlo
+automáticamente. Las ideas registradas el 2026-11-26 son: posproceso monofónico
+opcional, selector de tipo de entrada, metrónomo con conteo audible y
+backtracks por estilo. Cada una vive como propuesta con estado explícito en
+[docs/proposals](proposals/README.md). Percusión, armonización y edición
+multipista requieren su propio alcance y aprobación.

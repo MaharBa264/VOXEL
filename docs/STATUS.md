@@ -13,9 +13,83 @@
 - Rust/Cargo 1.100.0 locales en D:; Cargo.lock generado y build Windows debug comprobado.
 - Apertura visual del shell confirmada por captura del usuario.
 - Flujo nativo completo comprobado con señal sintética, incluido piano y descarga.
-  Micrófono físico, escucha y precisión vocal requieren aceptación manual.
+  Aceptación manual con micrófono y escucha reales completada el 2026-11-26 con
+  las limitaciones de transcripción documentadas en la sección de aceptación.
 - Se retoma la copia M01-A de D: y se publica su respaldo en GitHub por nueva
   instrucción permanente del usuario del 2026-11-18. Ver registro de sincronización abajo.
+
+## Aceptación manual M01-A — 2026-11-26
+
+El usuario aceptó M01-A con las limitaciones de transcripción documentadas más
+abajo. El código de la aplicación probado fue `081fcee`; el ajuste de
+`vite.config.ts` que impide que el servidor de desarrollo vigile entornos y
+datos locales se publica junto con este registro. No se modificó
+`src/domain/project.ts`, el contrato v1 ni la inferencia durante la prueba.
+
+Entorno: Windows 11 Pro build 26300 x64; Node 24.19.0; npm 12.0.2;
+Rust/Cargo 1.100.0 para `x86_64-pc-windows-msvc`; Python 3.11.15 en `.venv`;
+Basic Pitch 0.4.0; TensorFlow 2.14.0 CPU; WebView2 158.0.4370.33. La aplicación
+se abrió con `npm.cmd run desktop:dev:local`. Los proyectos quedaron en
+`projects/<UUID>`; no se copió audio al repositorio ni a servicios externos.
+
+Comandos ejecutados antes de la prueba:
+
+| Comando | Resultado |
+| --- | --- |
+| `git fetch origin` y `git merge --ff-only origin/main` | Código 0: `f01eb3f..081fcee`, sólo documentación |
+| `npm.cmd run python:check` | Código 0: Python 3.11.15, 66 paquetes compatibles |
+| `npm.cmd run check` | Código 0: TypeScript, 76 pruebas JS y build web |
+| `npm.cmd run test:python` | Código 0: 7 pruebas con el modelo real |
+| `cargo test --locked --manifest-path src-tauri/Cargo.toml` | Código 0: 12 pruebas |
+| `npm.cmd run check` tras el ajuste de Vite | Código 0 |
+| `curl http://127.0.0.1:1420/` tras el ajuste | HTTP 200 en 7 ms |
+
+Recorrido y resultado por criterio:
+
+| Criterio | Resultado |
+| --- | --- |
+| Permiso de micrófono concedido | Cumplido en WebView2 con una toma real. |
+| Indicador de grabación y liberación al detener | Indicador y detención observados. La liberación del micrófono del sistema no se comprobó de forma independiente; el E2E sintético previo sí verifica la liberación de tracks. |
+| Original audible y conservado | Cumplido: el usuario escuchó su voz con claridad. `original.webm` y `analysis.wav` existen y el WAV coincide con una decodificación independiente (correlación 1,0). |
+| Transcripción local y comparación | Cumplida con las limitaciones de abajo: la toma de referencia produjo 13 notas; el piano reproduce la melodía reconocible con octavas y omisiones puntuales. |
+| Piano audible y parada completa | Cumplido: el usuario lo oyó afinado y no quedaron voces sonando tras detener. |
+| MIDI descargado y abierto en una DAW | Cumplido: `melody.mid` de 163 B, 13 note-on, mismas notas que el MIDI del proyecto más un metaevento de compás 4/4; abierto en MuseScore 4 con 13 notas. |
+| Cerrar y reabrir | Cumplido: tras cerrar el proceso y reabrir la app se recuperaron la toma, el audio original y las 13 notas. Los SHA-256 de `project.json`, `melody.mid` y `original.webm` no cambiaron. |
+| Cancelar una transcripción y reintentar | No confirmado explícitamente por el usuario en esta sesión. El E2E sintético previo cubrió cancelación, reintento y conservación de notas. |
+| Recorrido sin conexión | Cumplido en ejecución: el usuario desconectó la red y repitió grabación, transcripción, escucha y descarga. Todo el procesamiento fue local. La calidad de esa toma quedó dentro de las mismas limitaciones del modelo. |
+| Permiso denegado | No repetido manualmente en esta sesión; cubierto por el E2E sintético previo. |
+
+Evidencia local, sin publicar audio: la toma de referencia `7d376213` duró
+6,72 s y produjo 13 notas; la toma offline `244b80dc` duró 5,46 s y produjo
+14 notas; dos tomas posteriores de 14:15 y 14:16, en registro agudo, produjeron
+8 y 2 notas. Esas dos últimas tienen un pico espectral de 1,2–1,7 kHz y son
+compatibles con silbido, entrada que el protocolo de M01-A no cubre.
+
+Limitaciones que motivan la aceptación con reservas:
+
+- Basic Pitch usa `minimum_note_length` de 127,7 ms por defecto y descarta notas
+  más cortas. Con el mismo audio y ese valor en 0 aparecieron 34 eventos, en su
+  mayoría fragmentos y armónicos; no se cambió el parámetro.
+- El modelo polifónico agrega armónicos como notas. En `244b80dc` emitió D#5
+  sobre un D#4 y G4/D5 sobre un G3; en `7d376213` agregó C#5 y G#5 como 2.º y
+  3.er armónico de C#4.
+- El silbido no se transcribe con fiabilidad con este modelo.
+- La descarga MIDI usa el mecanismo del navegador embebido: no muestra diálogo
+  de carpeta ni estado de progreso.
+- `melodia_trick=True` no explicó los duplicados: con ese valor en `False` los
+  eventos fueron idénticos en las tomas revisadas.
+
+Corrección de entorno encontrada durante la aceptación: al reiniciar la app
+la ventana quedó blanca porque Vite vigilaba `.venv`, `.tools`, `.cache`,
+`projects`, `src-tauri` y `dist`, y chocaba con temporales bloqueados
+(`EBUSY` en `.cache/tmp`). El proceso quedaba sin responder a HTTP. Se excluyeron
+esas carpetas de `server.watch.ignored` en `vite.config.ts`; después el servidor
+respondió en milisegundos y la app volvió a abrir normalmente. La corrección es
+sólo del servidor de desarrollo y no afecta al ejecutable ni a los datos.
+
+Decisión: M01-A queda aceptado con estas limitaciones por decisión del usuario
+del 2026-11-26. Las mejoras posteriores se registran como propuestas en
+`docs/proposals/` y no se implementan dentro de esta unidad de trabajo.
 
 Las secciones siguientes conservan la evidencia histórica de cada etapa.
 
@@ -116,7 +190,8 @@ Los esquemas y el ICO sí se conservan; el icono se regenera con
 - Build release, instalador y prueba del mínimo Rust 1.90 no ejecutados.
 - Validar voz real, micrófono físico y escucha del flujo integrado.
 - Diseñar runtime Python/modelo empaquetados, instalador, licencias y firma.
-- Completar aceptación manual M01-A y prueba del equipo físicamente desconectado.
+- Aceptación manual M01-A completada el 2026-11-26 con limitaciones de
+  transcripción; repetir opcionalmente permiso denegado y cancelación manual.
 - Recuperación ante corte de energía entre JSON/MIDI, migraciones y almacenamiento
   final fuera del workspace; el guardado actual es atómico por archivo.
 
