@@ -87,9 +87,10 @@ derivados separados para resampling y conversión mono, manteniendo la fuente.
 Rutas con `/`, relativas a la carpeta del proyecto; se rechazan rutas absolutas,
 UNC, traversal, barras inversas, segmentos vacíos, nombres reservados de Windows
 y caracteres no portables. El contrato por sí solo no comprueba archivos.
-El host valida proyectos propios con UUID, un original y entre una y tres
-pistas: la melodía y, si existen, las pistas de acompañamiento pop con ID,
-nombre, canal, programa y notas restringidos. Rechaza reparse points y escapes.
+El host valida proyectos propios con UUID, un original y hasta cuatro pistas:
+la melodía, acordes y bajo del acompañamiento pop, y percusión en canal 9 (GM
+canal 10), con ID, nombre, canal, programa y notas restringidos. Rechaza
+reparse points y escapes.
 No es un importador arbitrario del formato.
 La metadata de fuente refleja su decodificación Web Audio (sample rate del
 contexto y canales decodificados), no una inspección del header comprimido.

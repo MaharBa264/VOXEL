@@ -11,8 +11,8 @@ transcripción documentadas en [STATUS](docs/STATUS.md): grabación corta, audio
 original conservado, transcripción local con Basic Pitch, notas PPQ, piano
 muestreado local, descarga MIDI y recuperación de tomas. Las unidades siguientes
 implementadas en desarrollo son el metrónomo con conteo audible y pulso visual,
-el post-proceso monofónico opcional, el selector de tipo de entrada (voz
-soportada por el motor actual), el compás configurable por toma y el primer
+el post-proceso monofónico opcional, el selector de tipo de entrada (voz y
+percusión operativas), el compás configurable por toma y el primer
 corte de backtracks pop (acordes corregibles por compás y pistas MIDI de acordes
 y bajo). Las fases restantes están registradas como
 [propuestas](docs/proposals/README.md) y todavía no están implementadas.
@@ -34,8 +34,8 @@ npm.cmd run desktop:dev:local
    **Detener grabación**. Se detiene automáticamente a los 30 segundos.
 4. Pulsá **Transcribir melodía**. La primera ejecución puede tardar;
    **Cancelar transcripción** detiene el proceso y conserva el proyecto anterior.
-   El motor local sólo atiende voz/tarareo: silbido y percusión aparecen
-   deshabilitados hasta que tengan motor propio.
+   El motor local atiende voz/tarareo y percusión (golpes en canal 10 GM);
+   silbido aparece deshabilitado hasta tener motor propio.
 5. Usá **Escuchar piano**, **Descargar MIDI** o el reproductor del original.
 6. Desde **Proyecto guardado → Abrir**, recuperá audio y notas después de reiniciar.
 7. Con notas transcritas, corregí el acorde de cada compás y pulsá

@@ -67,6 +67,8 @@ export function App() {
   const projectMeterLabel = project ? `${project.timeSignature.numerator}/${project.timeSignature.denominator}` : meterLabel;
   const notes = project?.tracks.flatMap((track) => track.notes) ?? [];
   const melodyNotes = project?.tracks.find((track) => track.id === 'melody')?.notes ?? [];
+  const percussionNotes = project?.tracks.find((track) => track.id === 'percussion')?.notes ?? [];
+  const primaryNotes = percussionNotes.length ? percussionNotes : melodyNotes;
   const chordTrack = project?.tracks.find((track) => track.id === 'backtrack-chords');
   const chordKey = (chord: Chord) => `${chord.root}-${chord.quality}`;
   const harmonyReady = Boolean(project && melodyNotes.length && chords.length);
@@ -162,8 +164,8 @@ export function App() {
   };
   const transcribe = async () => {
     if (!project || !native || phaseRef.current !== 'idle') return;
-    if (inputKind !== 'voice') {
-      setError('El motor de silbido y percusión todavía no está disponible. Elegí Voz / tarareo.');
+    if (inputKind !== 'voice' && inputKind !== 'percussion') {
+      setError('El motor de silbido todavía no está disponible. Elegí Voz / tarareo o Percusión.');
       return;
     }
     audio.current?.pause(); setError(''); changePhase('transcribing');
@@ -202,7 +204,7 @@ export function App() {
     void writeBacktrack(buildPopBacktrack(chords, project.ppq, project.timeSignature, maxTick));
   };
   const play = async () => {
-    if (!project || !melodyNotes.length || phaseRef.current !== 'idle') return;
+    if (!project || !primaryNotes.length || phaseRef.current !== 'idle') return;
     audio.current?.pause(); setError(''); changePhase('piano-loading');
     const run = ++playRun.current;
     try {
@@ -211,7 +213,7 @@ export function App() {
     } catch (failure) { if (mounted.current && run === playRun.current) { setError(errorText(failure)); changePhase('idle'); } }
   };
   const download = () => {
-    if (!project || !melodyNotes.length || !idle) return;
+    if (!project || !primaryNotes.length || !idle) return;
     try {
       const url = URL.createObjectURL(new Blob([encodeProjectMidi(project)], { type: 'audio/midi' }));
       const link = document.createElement('a'); link.href = url; link.download = 'melody.mid'; link.click();
@@ -254,19 +256,19 @@ export function App() {
       <section className="result" aria-labelledby="result-title">
         <div className="section-top"><span className="step">02 / TRANSFORMAR</span><span className="muted">Piano · {projectMeterLabel}</span></div>
         <h3 id="result-title">De melodía a notas.</h3><p className="muted">{project ? `${duration.toFixed(1)} s · ${project.tempoBpm} BPM · ${projectMeterLabel} · ${project.ppq} PPQ` : 'Tu próxima melodía comienza acá.'}</p>
-        <div className="notes-preview" aria-label={melodyNotes.length ? `${melodyNotes.length} notas detectadas` : 'Todavía no hay notas'}>
-          {melodyNotes.length && project ? <svg viewBox="0 0 600 130" role="img" aria-label="Vista de las notas transcritas">
-            {melodyNotes.map((note, index) => <rect key={`${note.id}-${index}`} x={ticksToSeconds(note.startTick, project.ppq, project.tempoBpm) / Math.max(duration, .1) * 590} y={112 - note.pitch / 127 * 104} width={Math.max(2, ticksToSeconds(note.durationTicks, project.ppq, project.tempoBpm) / Math.max(duration, .1) * 590)} height="5" rx="2" />)}
+        <div className="notes-preview" aria-label={primaryNotes.length ? `${primaryNotes.length} notas detectadas` : 'Todavía no hay notas'}>
+          {primaryNotes.length && project ? <svg viewBox="0 0 600 130" role="img" aria-label="Vista de las notas transcritas">
+            {primaryNotes.map((note, index) => <rect key={`${note.id}-${index}`} x={ticksToSeconds(note.startTick, project.ppq, project.tempoBpm) / Math.max(duration, .1) * 590} y={112 - note.pitch / 127 * 104} width={Math.max(2, ticksToSeconds(note.durationTicks, project.ppq, project.tempoBpm) / Math.max(duration, .1) * 590)} height="5" rx="2" />)}
           </svg> : <div className="empty-notes"><span aria-hidden="true">♩</span><p>{project ? 'Audio listo para transcribir' : 'Todavía no hay una toma'}</p></div>}
         </div>
         <label className="input-kind">Tipo de entrada para la transcripción <span>
           <select aria-label="Tipo de entrada para la transcripción" value={inputKind} disabled={!native || !idle} onChange={(event) => setInputKind(event.target.value)}>
             <option value="voice">Voz / tarareo</option>
             <option value="whistle" disabled>Silbido (sin motor aún)</option>
-            <option value="percussion" disabled>Percusión (sin motor aún)</option>
+            <option value="percussion">Percusión (golpes)</option>
           </select>
         </span></label>
-        <p className="fine-print">Por ahora el motor local transcribe sólo voz/tarareo; silbido y percusión esperan su motor.</p>
+        <p className="fine-print">Percusión detecta golpes y los guarda en canal 10 GM; silbido sigue sin motor. El piano local es sólo referencia sonora de los golpes.</p>
         {harmonyReady && <div className="harmony">
           <div className="harmony-head"><span className="step">ARMONÍA PROPUESTA</span><span className="muted">{keyName}</span></div>
           <p className="fine-print">Elegí el acorde de cada compás y generá un acompañamiento pop en pistas MIDI. La melodía y el audio original no se modifican.</p>
@@ -287,10 +289,10 @@ export function App() {
           {phase === 'transcribing' || phase === 'canceling' ? <button disabled={phase === 'canceling'} onClick={() => void cancel()}>{phase === 'canceling' ? 'Cancelando…' : 'Cancelar transcripción'}</button>
             : <button disabled={!native || !project || !idle} onClick={() => void transcribe()}>Transcribir melodía</button>}
           {phase === 'playing' || phase === 'piano-loading' ? <button onClick={() => { playRun.current++; piano.current.stop(); changePhase('idle'); }}>■ Detener piano</button>
-            : <button disabled={!native || !melodyNotes.length || !idle} onClick={() => void play()}>▶ Escuchar piano</button>}
-          <button className="download" disabled={!native || !melodyNotes.length || !idle} onClick={download}>↓ Descargar MIDI</button>
+            : <button disabled={!native || !primaryNotes.length || !idle} onClick={() => void play()}>▶ Escuchar piano</button>}
+          <button className="download" disabled={!native || !primaryNotes.length || !idle} onClick={download}>↓ Descargar MIDI</button>
         </div>
-        <p className="fine-print">{melodyNotes.length ? `${melodyNotes.length} notas · ` : ''}Piano: <a href="/piano/ATTRIBUTION.txt" target="_blank" rel="noreferrer">Alexander Holm · CC BY 3.0</a></p>
+        <p className="fine-print">{primaryNotes.length ? `${primaryNotes.length} notas · ` : ''}Piano: <a href="/piano/ATTRIBUTION.txt" target="_blank" rel="noreferrer">Alexander Holm · CC BY 3.0</a></p>
       </section>
     </div>
     <div className="status-line" role="status" aria-live="polite"><span className={`status-dot ${idle ? '' : 'active'}`} /><span>{statuses[phase]}</span><span className="status-detail">{idle ? notice : phase === 'transcribing' ? 'La primera ejecución puede tardar. Podés cancelarla.' : phase === 'counting' ? 'El conteo no forma parte de la toma.' : 'Esperá a que termine esta operación.'}</span></div>

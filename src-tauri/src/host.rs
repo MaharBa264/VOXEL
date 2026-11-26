@@ -211,7 +211,7 @@ fn validate_project(project: &Project, id: &str) -> Result<()> {
         || ![1, 2, 4, 8, 16, 32, 64, 128].contains(&project.time_signature.denominator)
         || project.audio_assets.len() != 1
         || project.tracks.is_empty()
-        || project.tracks.len() > 3
+        || project.tracks.len() > 4
     {
         return Err("Invalid owned project format".into());
     }
@@ -240,6 +240,7 @@ fn validate_project(project: &Project, id: &str) -> Result<()> {
         let (name, channel, program) = match extra.id.as_str() {
             "backtrack-chords" => ("Acordes", 1, 0),
             "backtrack-bass" => ("Bajo", 2, 32),
+            "percussion" => ("Percusión", 9, 0),
             _ => return Err("Invalid backtrack track".into()),
         };
         if extra.name != name
@@ -725,7 +726,19 @@ impl Host {
         if self.job.cancel.load(Ordering::SeqCst) {
             return Err("Transcription canceled".into());
         }
-        project.tracks[0].notes = result.notes;
+        if input_kind == "percussion" {
+            project.tracks.retain(|track| track.id != "percussion");
+            project.tracks.push(Track {
+                id: "percussion".into(),
+                name: "Percusión".into(),
+                midi_channel: 9,
+                program: 0,
+                source_audio_id: "original".into(),
+                notes: result.notes,
+            });
+        } else {
+            project.tracks[0].notes = result.notes;
+        }
         self.store.commit_transcription(&project, &midi_bytes)?;
         Ok(project)
     }
@@ -766,7 +779,7 @@ pub fn save_backtrack(
     if tracks.len() > 2 {
         return Err("Invalid backtrack tracks".into());
     }
-    project.tracks.truncate(1);
+    project.tracks.retain(|track| track.id == "melody" || track.id == "percussion");
     project.tracks.extend(tracks);
     host.store.persist(&project)?;
     Ok(project)
@@ -1252,6 +1265,38 @@ mod tests {
             .transcribe(&project.id, host.job.begin().unwrap(), false, "voice")
             .unwrap();
         assert!(result.tracks[0].notes.iter().any(|n| n.pitch == 69));
+    }
+
+    #[test]
+    fn real_python_worker_percussion_creates_gm_drum_track() {
+        let host = test_host();
+        let mut clicks = wav(32000, 16000);
+        for (index, chunk) in clicks[44..].chunks_exact_mut(2).enumerate() {
+            let seconds = index as f64 / 16000.0;
+            let phase = (seconds * 2.0) % 1.0;
+            let value = if phase < 0.02 {
+                (phase / 0.02 * std::f64::consts::TAU).sin() * 12000.0
+            } else {
+                0.0
+            };
+            chunk.copy_from_slice(&(value as i16).to_le_bytes());
+        }
+        let project = host
+            .store
+            .save(&clicks, "audio/wav", &clicks, 16000, 2.0, 120.0)
+            .unwrap();
+        host.transcribe(&project.id, host.job.begin().unwrap(), false, "percussion")
+            .unwrap();
+        let loaded = host.store.load(&project.id).unwrap();
+        let drums = loaded
+            .tracks
+            .iter()
+            .find(|track| track.id == "percussion")
+            .expect("Percussion track must be created");
+        assert_eq!(drums.midi_channel, 9);
+        assert!(!drums.notes.is_empty());
+        assert!(drums.notes.iter().all(|note| [36, 38, 42].contains(&note.pitch)));
+        assert!(loaded.tracks[0].notes.is_empty(), "Melody track stays untouched");
     }
 
     #[test]

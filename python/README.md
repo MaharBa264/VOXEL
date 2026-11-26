@@ -113,10 +113,13 @@ un tick cuando cabe en la duración de entrada redondeada. Velocity se calcula
 como amplitud × 127, redondeada con la misma regla y limitada a 1–127.
 Pitch bend se ignora. El MIDI tipo 0 usa exactamente esas notas PPQ, tempo y
 piano GM programa 0; no se reutilizan los tiempos del MIDI de Basic Pitch. El
-flag opcional `--input-kind` (por ahora sólo `voice`) y `--monophonic` activan
-el filtro de armónicos; `--time-signature n/d` (por defecto `4/4`) escribe el
-metaevento de compás, con numerador 1–255 y denominador potencia de dos de 1 a
-128. Los valores no soportados se rechazan antes de cargar el modelo.
+flag opcional `--input-kind` acepta `voice` y `percussion`: con `percussion` no
+se carga Basic Pitch; un detector de ataques por flujo espectral y tres bandas
+emite golpes 36/38/42 en canal 9 (GM canal 10), sin samples ni modelos nuevos.
+`--monophonic` activa el filtro de armónicos sólo para voz; `--time-signature
+n/d` (por defecto `4/4`) escribe el metaevento de compás, con numerador 1–255 y
+denominador potencia de dos de 1 a 128. Los valores no soportados se rechazan
+antes de cargar el modelo.
 
 Un pico de hasta 3 unidades PCM16 (aprox. −80 dBFS) se considera silencio y
 omite la carga del modelo. Los originales se leen sin modificarlos y se

@@ -105,7 +105,7 @@ try {
   const inputKindSelect = page.getByRole('combobox', { name: /Tipo de entrada para la transcripción/ });
   assert.equal(await inputKindSelect.inputValue(), 'voice', 'Only voice is usable by the local engine');
   assert.ok(await inputKindSelect.locator('option[value="whistle"]').isDisabled(), 'Whistle option is disabled');
-  assert.ok(await inputKindSelect.locator('option[value="percussion"]').isDisabled(), 'Percussion option is disabled');
+  assert.ok(await inputKindSelect.locator('option[value="percussion"]').isEnabled(), 'Percussion option is available');
   // Cancel a count-in: no take is saved and the microphone is released.
   await page.getByRole('button', { name: /Grabar melodía/ }).click();
   await page.getByRole('button', { name: /Cancelar conteo/ }).waitFor();
@@ -204,6 +204,16 @@ try {
   await page.getByRole('button', { name: /Quitar acompañamiento/ }).click();
   await page.getByText('Acompañamiento quitado.').waitFor();
   assert.equal(JSON.parse(await readFile(join(projectPath, 'project.json'), 'utf8')).tracks.length, 1, 'Removal keeps the melody');
+  // Percussion engine: the same take is re-transcribed as taps into a GM drum track.
+  await inputKindSelect.selectOption('percussion');
+  await page.getByRole('button', { name: /Transcribir melodía/ }).click();
+  await page.getByRole('button', { name: /Cancelar transcripción/ }).waitFor();
+  await page.waitForFunction(() => [...document.querySelectorAll('button')]
+    .some((button) => button.textContent.includes('Transcribir melodía') && !button.disabled), null, { timeout: 180000 });
+  const percussionProject = JSON.parse(await readFile(join(projectPath, 'project.json'), 'utf8'));
+  const drumTrack = percussionProject.tracks.find((entry) => entry.id === 'percussion');
+  assert.ok(drumTrack, 'Percussion transcription creates a drum track');
+  assert.equal(drumTrack.midiChannel, 9, 'Drum track uses General MIDI channel 10');
   await page.screenshot({ path: join(output, 'studio.png'), fullPage: true });
   assert.deepEqual(externalRequests, [], 'No external page requests allowed');
   assert.deepEqual(errors, [], 'No unhandled page errors');
@@ -213,7 +223,7 @@ try {
     metronomeDefault: true, countInCanceled: true, countingElapsed, countInPeak,
     timeSignature: project.timeSignature,
     midiDownload: true, backtrackTracks: withBacktrack.tracks.length, backtrackMidiTracks: 3,
-    backtrackRemoved: true, pianoSignalPeak: peak, captureStates, notes: project.tracks[0].notes,
+    backtrackRemoved: true, percussionTrack: true, pianoSignalPeak: peak, captureStates, notes: project.tracks[0].notes,
     externalRequests, errors }, null, 2));
   console.log(`PASS: native WebView2 → real recording → Tauri storage → Python inference → PPQ/MIDI → piano → reopen. Report: ${output}`);
 } catch (error) {

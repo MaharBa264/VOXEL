@@ -118,6 +118,80 @@ def infer_events(path):
     return events
 
 
+def infer_percussion_events(path):
+    """Rule-based onset detection for tapped/percussive input; no model is loaded.
+
+    Returns (start, end, pitch, amplitude) events. Pitch follows the General MIDI
+    drum map: 36 kick, 38 snare, 42 closed hi-hat. Three frequency bands and a
+    positive spectral flux decide when a hit happens and what it sounds closest
+    to. The algorithm is deterministic and reads only the local WAV.
+    """
+    import numpy as np
+
+    with wave.open(str(path), 'rb') as audio:
+        rate = audio.getframerate()
+        raw = audio.readframes(audio.getnframes())
+    samples = np.frombuffer(raw, dtype='<i2').astype(np.float32) / 32768.0
+    if samples.size < 512:
+        return []
+    fft_size = 1 << max(10, int(math.ceil(math.log2(max(512, rate // 25)))))
+    hop = max(1, rate // 100)
+    count = 1 + (samples.size - fft_size) // hop
+    if count < 2:
+        return []
+    window = np.hanning(fft_size).astype(np.float32)
+    offsets = np.arange(count, dtype=np.int64) * hop
+    frames = samples[offsets[:, None] + np.arange(fft_size)[None, :]] * window[None, :]
+    spectrum = np.abs(np.fft.rfft(frames, axis=1))
+    frequencies = np.fft.rfftfreq(fft_size, 1.0 / rate)
+    bands = (
+        (frequencies >= 40) & (frequencies < 250),
+        (frequencies >= 250) & (frequencies < 2500),
+        (frequencies >= 2500) & (frequencies < 12000),
+    )
+    energy = [spectrum[:, band].sum(axis=1) for band in bands]
+    flux = np.maximum(0.0, np.diff(spectrum, axis=0)).sum(axis=1)
+    maximum = float(flux.max()) if flux.size else 0.0
+    if maximum <= 0:
+        return []
+    threshold = max(float(np.median(flux)) + 2.0 * float(np.std(flux)), 0.1 * maximum)
+    candidates = [int(index) for index in np.flatnonzero(flux > threshold)]
+    clusters = []
+    for index in candidates:
+        if clusters and index - clusters[-1][-1] <= 2:
+            clusters[-1].append(index)
+        else:
+            clusters.append([index])
+    minimum_gap = max(1, int(rate * 0.08) // hop)
+    chosen = []
+    for cluster in clusters:
+        peak = max(cluster, key=lambda index: float(flux[index]))
+        if chosen and peak - chosen[-1] < minimum_gap:
+            continue
+        chosen.append(peak)
+    if not chosen:
+        return []
+    loudest = max(float(each.max()) for each in energy) or 1.0
+    events = []
+    for position, flux_index in enumerate(chosen):
+        frame = flux_index + 1
+        low, mid, high = [float(each[frame]) for each in energy]
+        total = low + mid + high + 1e-9
+        if low / total > 0.5:
+            pitch = 36
+        elif high / total > 0.45:
+            pitch = 42
+        else:
+            pitch = 38
+        start = frame * hop / rate
+        end = start + 0.08
+        if position + 1 < len(chosen):
+            end = min(end, (chosen[position + 1] + 1) * hop / rate)
+        amplitude = min(1.0, 0.05 + 0.8 * math.sqrt(total / loudest))
+        events.append((start, max(start + 0.01, end), pitch, amplitude))
+    return events
+
+
 def variable_length(value):
     data = [value & 127]
     value >>= 7
@@ -141,8 +215,10 @@ def parse_time_signature(value):
     return parsed_numerator, parsed_denominator
 
 
-def midi_bytes(notes, tempo, ppq, time_signature=(4, 4)):
-    """Format 0, piano channel 0; events come exclusively from converted PPQ notes."""
+def midi_bytes(notes, tempo, ppq, time_signature=(4, 4), channel=0):
+    """Format 0; events come exclusively from converted PPQ notes."""
+    if not 0 <= channel <= 15:
+        raise ValueError('Invalid MIDI channel')
     microseconds = nearest(60_000_000 / tempo)
     numerator, denominator = time_signature
     denominator_exponent = int(round(math.log2(denominator)))
@@ -155,7 +231,7 @@ def midi_bytes(notes, tempo, ppq, time_signature=(4, 4)):
     previous = 0
     for tick, on, pitch, velocity in sorted(events):
         track.extend(variable_length(tick - previous))
-        track.extend(bytes((0x90 if on else 0x80, pitch, velocity)))
+        track.extend(bytes(((0x90 if on else 0x80) | channel, pitch, velocity)))
         previous = tick
     track.extend(b'\x00\xff\x2f\x00')
     return b'MThd' + struct.pack('>IHHH', 6, 0, 1, ppq) + b'MTrk' + struct.pack('>I', len(track)) + track
@@ -170,12 +246,12 @@ def validate_paths(source, output, midi):
     return paths
 
 
-SUPPORTED_INPUT_KINDS = ('voice',)
+SUPPORTED_INPUT_KINDS = ('voice', 'percussion')
 
 
 def validate_input_kind(value):
     if value not in SUPPORTED_INPUT_KINDS:
-        raise ValueError('Unsupported input kind; only "voice" is supported by the local engine')
+        raise ValueError('Unsupported input kind; only "voice" and "percussion" are supported')
 
 
 def transcribe(source, output, midi, tempo, ppq, monophonic=False, input_kind='voice', time_signature=None):
@@ -188,11 +264,18 @@ def transcribe(source, output, midi, tempo, ppq, monophonic=False, input_kind='v
     source, output, midi = validate_paths(source, output, midi)
     configure_environment()
     duration, silence = read_audio(source)
-    notes = [] if silence else convert_events(infer_events(source), tempo, ppq, duration)
-    if monophonic:
+    if silence:
+        events = []
+    elif input_kind == 'percussion':
+        events = infer_percussion_events(source)
+    else:
+        events = infer_events(source)
+    notes = convert_events(events, tempo, ppq, duration)
+    if monophonic and input_kind != 'percussion':
         notes = select_monophonic(notes)
     result = {'protocolVersion': 1, 'notes': notes, 'silence': silence}
-    payloads = [(midi, midi_bytes(notes, tempo, ppq, parsed_time_signature)),
+    channel = 9 if input_kind == 'percussion' else 0
+    payloads = [(midi, midi_bytes(notes, tempo, ppq, parsed_time_signature, channel)),
                 (output, (json.dumps(result, allow_nan=False) + '\n').encode('utf-8'))]
     staged = []
     try:

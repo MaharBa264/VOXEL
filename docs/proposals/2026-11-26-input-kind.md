@@ -1,10 +1,9 @@
 # Selector del tipo de entrada: voz, silbido o percusión
 
-**Estado:** selector conectado al worker vía `--input-kind`, con sólo `voice`
-operativo. El 2026-11-26, tras un intento fallido del usuario con una opción no
-soportada, `Silbido` y `Percusión` se deshabilitaron en la interfaz con etiqueta
-«sin motor aún»; los motores siguen pendientes. Ver
-[STATUS](../STATUS.md#selector-de-tipo-de-entrada--2026-11-26).
+**Estado:** selector conectado al worker vía `--input-kind`. `voice` y
+`percussion` están operativos desde el 2026-11-26; `whistle` sigue deshabilitado
+y etiquetado «sin motor aún». Ver
+[STATUS](../STATUS.md#motor-de-percusión--2026-11-26).
 
 ## Problema y contexto
 
@@ -74,19 +73,27 @@ Decisiones tomadas para esta unidad:
 
 - Se agregó el selector de tipo de entrada a la interfaz (voz/tarareo, silbido,
   percusión) y se pasa al worker con el flag `--input-kind`.
-- El worker valida el valor y acepta sólo `voice`; los valores restantes
-  devuelven error explícito sin tocar la inferencia.
+- El worker valida el valor: acepta `voice` y `percussion`; `whistle` devuelve
+  error explícito sin tocar la inferencia.
 - El tipo se envía por petición de transcripción, no se guarda en el proyecto
   (el contrato v1 no varió).
 - El 2026-11-26, después de que el usuario informara un error al elegir una
-  opción sin motor, se desactivaron `Silbido` y `Percusión` en la interfaz con
-  etiqueta «sin motor aún» y se agregó una guarda que impide enviarlas al
-  worker. La validación del worker se conserva.
+  opción sin motor, se desactivó `Silbido`; `Percusión` se implementó después y
+  volvió a habilitarse. La validación del worker se conserva como segunda barrera.
+- La percusión usa detección local de ataques (flujo espectral positivo y tres
+  bandas de frecuencia) sin cargar Basic Pitch, y escribe notas GM 36/38/42 en
+  canal 9 (canal 10 para el DAW). El host crea una pista `percussion` con ese
+  canal; el proyecto pasa a admitir hasta cuatro pistas sin cambiar
+  `schemaVersion`.
 
 ## Validación ejecutada
 
-- `npm.cmd run check`, `npm.cmd run test:python`, `cargo check/test` y el E2E
-  nativo en verde, con la transcripción de prueba usando el tipo soportado.
-- El E2E comprueba que las dos opciones no soportadas están deshabilitadas.
-- Pendiente: implementar motores para silbido y percusión y decidir dónde se
-  persisten.
+- `python/test_transcribe.py` cubre golpes sintéticos a 80 Hz, clasificación
+  como bombo y escritura en canal 9 sin invocar el modelo.
+- `cargo test` incluye una toma real sintética con golpes: crea la pista de
+  percusión, comprueba el canal 9 y que la pista de melodía quede intacta.
+- `npm.cmd run check`, `npm.cmd run test:python` (15 pruebas),
+  `cargo check/test` (15 pruebas) y el E2E nativo en verde. El E2E verifica que
+  `Silbido` sigue deshabilitado y que transcribir como percusión crea la pista.
+- Pendiente: calibrar con escritorio/micrófono reales, ampliar voces de batería
+  y definir el motor de silbido y la persistencia del tipo de entrada.

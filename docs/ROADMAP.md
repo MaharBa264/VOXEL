@@ -65,11 +65,10 @@ restantes de backtracks siguen como propuesta:
   (interruptor, flag `--monophonic`, desactivado por defecto). Ver
   [propuesta](proposals/2026-11-26-monophonic-postprocess.md). La comparación con
   y sin filtro sobre toma real sigue pendiente.
-- [x] Selector del tipo de entrada conectado al worker. Sólo voz/tarareo es
-  operativa; silbido y percusión quedan deshabilitados y etiquetados «sin motor
-  aún» tras un intento fallido del usuario. Ver
-  [propuesta](proposals/2026-11-26-input-kind.md). Los motores faltantes quedan
-  como trabajo posterior.
+- [x] Selector del tipo de entrada conectado al worker: voz/tarareo y percusión
+  operativos; silbido sigue deshabilitado «sin motor aún». Ver
+  [propuesta](proposals/2026-11-26-input-kind.md) y evidencia en
+  [STATUS](STATUS.md). Falta calibrar la percusión con golpes reales.
 - [x] Metrónomo con conteo audible de un compás y pulso visual durante la toma,
   con interruptor y cancelación del conteo. Ver
   [propuesta](proposals/2026-11-26-metronome.md) y evidencia en

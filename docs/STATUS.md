@@ -22,6 +22,8 @@
   en la inferencia.
 - Compás configurable por toma, confirmado manualmente el 2026-11-26; ver la
   sección correspondiente.
+- Motor de percusión local implementado el 2026-11-26; ver la sección
+  correspondiente. Silbido sigue sin motor.
 - Backtracks por estilo: primer corte pop aprobado e implementado (acordes
   corregibles por compás y pistas MIDI de acordes y bajo); ver la sección
   correspondiente y [la propuesta](proposals/2026-11-26-style-backtracks.md).
@@ -137,8 +139,43 @@ Comportamiento actual:
   interfaz que impide enviarlas al worker. El worker mantiene su validación
   estricta como segunda barrera.
 
-Pendiente: motores para silbido y percusión, y decisión sobre persistencia del
-tipo en el proyecto (el contrato v1 no varió).
+Pendiente: motor de silbido y decisión sobre persistencia del tipo en el
+proyecto (el contrato v1 no varió).
+
+## Motor de percusión — 2026-11-26
+
+Unidad pedida por el usuario tras el informe del error con una opción sin motor.
+Ver [propuesta](proposals/2026-11-26-input-kind.md).
+
+Alcance implementado:
+
+- `--input-kind percussion` ejecuta un detector local de ataques en
+  `python/transcribe.py`: flujo espectral positivo, ventanas Hann y tres bandas
+  (40–250, 250–2500 y 2500–12000 Hz), con separación mínima de 80 ms entre
+  golpes. No carga Basic Pitch ni modelos nuevos.
+- Clasificación gruesa en bombo (36), caja (38) y hi-hat cerrado (42) según la
+  energía de banda; velocity derivada de la energía del ataque; duración corta
+  fija (máx. 80 ms) recortada al audio.
+- El host crea una pista `percussion` en canal 9 (GM canal 10) y programa 0.
+  El contrato v1 admite ahora hasta cuatro pistas sin cambiar `schemaVersion`.
+  El MIDI generado por el worker y la descarga usan el mismo canal.
+- Interfaz: opción «Percusión (golpes)» habilitada; «Silbido» sigue deshabilitada
+  y etiquetada «sin motor aún». La vista previa, el piano y la descarga muestran
+  las notas de percusión cuando existen.
+
+Comandos y resultados:
+
+| Comando | Resultado |
+| --- | --- |
+| `npm.cmd run check` | Código 0 (90 pruebas JS y build web) |
+| `npm.cmd run test:python` | Código 0 (15 pruebas) |
+| `cargo check --locked` / `cargo test --locked` | Código 0 (15 pruebas) |
+| `npm.cmd run test:desktop` | Código 0, PASS nativo; pista de percusión en canal 9 |
+
+Límites: detección por reglas y tres voces de batería, sin samples propios; el
+piano local reproduce los golpes como referencia sonora, no como batería. Hace
+falta calibración con golpes reales sobre escritorio/mesa y micrófono, y sigue
+pendiente el motor de silbido.
 
 ## Compás configurable — 2026-11-26
 

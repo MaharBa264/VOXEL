@@ -17,6 +17,18 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKER = ROOT / 'python' / 'transcribe.py'
 
 
+def percussion_wav(path, hits=(0.1, 0.3, 0.5, 0.7), rate=22050):
+    samples = [0] * rate
+    length = int(0.02 * rate)
+    for hit in hits:
+        start = int(hit * rate)
+        for index in range(length):
+            envelope = 1 - index / length
+            value = math.sin(2 * math.pi * 80 * index / rate) * 12000 * envelope
+            samples[start + index] = int(value)
+    wav(path, samples, rate=rate)
+
+
 def wav(path, samples=None, channels=1, width=2, rate=22050):
     samples = samples if samples is not None else [0] * rate
     with wave.open(str(path), 'wb') as f:
@@ -136,7 +148,29 @@ class WorkerTests(unittest.TestCase):
             p = Path(folder); source = p / 'in.wav'
             wav(source, [1] * 22050)
             with self.assertRaises(ValueError):
-                self.worker.transcribe(source, p / 'out.json', p / 'out.mid', 120, 480, input_kind='percussion')
+                self.worker.transcribe(source, p / 'out.json', p / 'out.mid', 120, 480, input_kind='whistle')
+
+    def test_percussion_detector_finds_regular_low_hits(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / '.cache') as folder:
+            p = Path(folder); source = p / 'in.wav'
+            percussion_wav(source)
+            events = self.worker.infer_percussion_events(source)
+            self.assertGreaterEqual(len(events), 3)
+            self.assertTrue(all(pitch == 36 for _, _, pitch, _ in events))
+            starts = [start for start, _, _, _ in events]
+            self.assertTrue(all(0 <= start <= 1.0 for start in starts))
+            self.assertEqual(starts, sorted(starts))
+
+    def test_percussion_flag_skips_model_and_writes_drum_channel(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / '.cache') as folder:
+            p = Path(folder); source = p / 'in.wav'
+            percussion_wav(source, hits=(0.1, 0.4), rate=22050)
+            with patch.object(self.worker, 'infer_events', side_effect=AssertionError('model loaded')):
+                result = self.worker.transcribe(source, p / 'out.json', p / 'out.mid', 120, 480, input_kind='percussion')
+            self.assertFalse(result['silence'])
+            self.assertGreaterEqual(len(result['notes']), 1)
+            self.assertTrue(all(note['pitch'] in (36, 38, 42) for note in result['notes']))
+            self.assertIn(0x99, (p / 'out.mid').read_bytes())
 
     def test_time_signature_is_written_to_midi_and_validated(self):
         self.assertEqual(self.worker.parse_time_signature('6/8'), (6, 8))
