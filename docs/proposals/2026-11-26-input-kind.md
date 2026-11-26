@@ -1,9 +1,10 @@
 # Selector del tipo de entrada: voz, silbido o percusión
 
-**Estado:** implementado en desarrollo el 2026-11-26 en su fase actual: selector
-disponible con opciones voz/tarareo, silbido y percusión, conectado al worker
-vía flag `--input-kind`; el motor actual atiende sólo `voice` y rechaza los
-demás con error claro. Ver [STATUS](../STATUS.md#metrónomo-conteo-audible-y-pulso-visual--2026-11-26).
+**Estado:** selector conectado al worker vía `--input-kind`, con sólo `voice`
+operativo. El 2026-11-26, tras un intento fallido del usuario con una opción no
+soportada, `Silbido` y `Percusión` se deshabilitaron en la interfaz con etiqueta
+«sin motor aún»; los motores siguen pendientes. Ver
+[STATUS](../STATUS.md#selector-de-tipo-de-entrada--2026-11-26).
 
 ## Problema y contexto
 
@@ -77,10 +78,15 @@ Decisiones tomadas para esta unidad:
   devuelven error explícito sin tocar la inferencia.
 - El tipo se envía por petición de transcripción, no se guarda en el proyecto
   (el contrato v1 no varió).
+- El 2026-11-26, después de que el usuario informara un error al elegir una
+  opción sin motor, se desactivaron `Silbido` y `Percusión` en la interfaz con
+  etiqueta «sin motor aún» y se agregó una guarda que impide enviarlas al
+  worker. La validación del worker se conserva.
 
 ## Validación ejecutada
 
 - `npm.cmd run check`, `npm.cmd run test:python`, `cargo check/test` y el E2E
   nativo en verde, con la transcripción de prueba usando el tipo soportado.
+- El E2E comprueba que las dos opciones no soportadas están deshabilitadas.
 - Pendiente: implementar motores para silbido y percusión y decidir dónde se
   persisten.

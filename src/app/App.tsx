@@ -162,6 +162,10 @@ export function App() {
   };
   const transcribe = async () => {
     if (!project || !native || phaseRef.current !== 'idle') return;
+    if (inputKind !== 'voice') {
+      setError('El motor de silbido y percusión todavía no está disponible. Elegí Voz / tarareo.');
+      return;
+    }
     audio.current?.pause(); setError(''); changePhase('transcribing');
     try {
       const next = await projects.transcribeTake(project.id, monophonic, inputKind);
@@ -258,10 +262,11 @@ export function App() {
         <label className="input-kind">Tipo de entrada para la transcripción <span>
           <select aria-label="Tipo de entrada para la transcripción" value={inputKind} disabled={!native || !idle} onChange={(event) => setInputKind(event.target.value)}>
             <option value="voice">Voz / tarareo</option>
-            <option value="whistle">Silbido</option>
-            <option value="percussion">Percusión</option>
+            <option value="whistle" disabled>Silbido (sin motor aún)</option>
+            <option value="percussion" disabled>Percusión (sin motor aún)</option>
           </select>
         </span></label>
+        <p className="fine-print">Por ahora el motor local transcribe sólo voz/tarareo; silbido y percusión esperan su motor.</p>
         {harmonyReady && <div className="harmony">
           <div className="harmony-head"><span className="step">ARMONÍA PROPUESTA</span><span className="muted">{keyName}</span></div>
           <p className="fine-print">Elegí el acorde de cada compás y generá un acompañamiento pop en pistas MIDI. La melodía y el audio original no se modifican.</p>

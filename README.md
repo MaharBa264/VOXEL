@@ -34,6 +34,8 @@ npm.cmd run desktop:dev:local
    **Detener grabación**. Se detiene automáticamente a los 30 segundos.
 4. Pulsá **Transcribir melodía**. La primera ejecución puede tardar;
    **Cancelar transcripción** detiene el proceso y conserva el proyecto anterior.
+   El motor local sólo atiende voz/tarareo: silbido y percusión aparecen
+   deshabilitados hasta que tengan motor propio.
 5. Usá **Escuchar piano**, **Descargar MIDI** o el reproductor del original.
 6. Desde **Proyecto guardado → Abrir**, recuperá audio y notas después de reiniciar.
 7. Con notas transcritas, corregí el acorde de cada compás y pulsá

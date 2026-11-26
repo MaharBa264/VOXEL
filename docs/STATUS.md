@@ -127,8 +127,15 @@ Alcance implementado:
 
 Comportamiento actual:
 
-- Sólo `voice` está soportado por el motor local; los valores `whistle` y
-  `percussion` se rechazan con error explícito y no llegan a inferencia.
+- Sólo `voice` está soportado por el motor local. El 2026-11-26 el usuario eligió
+  una opción no soportada y el worker devolvió `Unsupported input kind`; la toma
+  quedó intacta y sin notas. El incidente se registró en
+  `projects/d187f14b-01e1-4b97-943c-b8753a3bc351/job-51fbbfcb…/worker.log` y no
+  se copió audio al repositorio.
+- Tras el informe del usuario, `Silbido` y `Percusión` quedan **deshabilitadas**
+  y etiquetadas «sin motor aún», con texto explicativo y una guarda en la
+  interfaz que impide enviarlas al worker. El worker mantiene su validación
+  estricta como segunda barrera.
 
 Pendiente: motores para silbido y percusión, y decisión sobre persistencia del
 tipo en el proyecto (el contrato v1 no varió).

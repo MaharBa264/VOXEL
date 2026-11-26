@@ -102,6 +102,10 @@ try {
   assert.equal(await meterSelect.inputValue(), '4/4', 'Default meter is 4/4');
   await meterSelect.selectOption('3/4');
   assert.equal(await meterSelect.inputValue(), '3/4');
+  const inputKindSelect = page.getByRole('combobox', { name: /Tipo de entrada para la transcripción/ });
+  assert.equal(await inputKindSelect.inputValue(), 'voice', 'Only voice is usable by the local engine');
+  assert.ok(await inputKindSelect.locator('option[value="whistle"]').isDisabled(), 'Whistle option is disabled');
+  assert.ok(await inputKindSelect.locator('option[value="percussion"]').isDisabled(), 'Percussion option is disabled');
   // Cancel a count-in: no take is saved and the microphone is released.
   await page.getByRole('button', { name: /Grabar melodía/ }).click();
   await page.getByRole('button', { name: /Cancelar conteo/ }).waitFor();
