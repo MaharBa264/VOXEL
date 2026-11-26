@@ -57,14 +57,18 @@ en [STATUS](STATUS.md).
 
 ## Propuestas posteriores a M01-A — 2026-11-26
 
-Solicitadas por el usuario; ninguna está implementada todavía:
+Solicitadas por el usuario. El metrónomo ya está implementado en desarrollo;
+las otras tres siguen siendo propuestas:
 
 - [ ] Posproceso monofónico opcional para reducir armónicos y octavas duplicadas.
   Ver [propuesta](proposals/2026-11-26-monophonic-postprocess.md).
 - [ ] Selector del tipo de entrada: voz/tarareo, silbido o percusión.
   Ver [propuesta](proposals/2026-11-26-input-kind.md).
-- [ ] Metrónomo con conteo audible y marca visual del tempo.
-  Ver [propuesta](proposals/2026-11-26-metronome.md).
+- [x] Metrónomo con conteo audible de un compás y pulso visual durante la toma,
+  con interruptor y cancelación del conteo. Ver
+  [propuesta](proposals/2026-11-26-metronome.md) y evidencia en
+  [STATUS](STATUS.md). La escucha con micrófono real queda pendiente de
+  confirmación manual.
 - [ ] Armonías y backtracks por estilo (jazz, pop, rock, cumbia, cuarteto, folk)
   a partir de una o varias tomas. Ver [propuesta](proposals/2026-11-26-style-backtracks.md).
 

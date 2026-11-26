@@ -1,6 +1,9 @@
 # Metrónomo con conteo audible y marca visual del tempo
 
-**Estado:** propuesta — solicitada por el usuario el 2026-11-26. No implementada.
+**Estado:** implementada en desarrollo el 2026-11-26. Ver la evidencia en
+[STATUS](../STATUS.md#metrónomo-conteo-audible-y-pulso-visual--2026-11-26).
+La prueba es sintética; la escucha con micrófono real quedó pendiente de
+confirmación manual.
 
 ## Problema y contexto
 
@@ -49,9 +52,30 @@ Para tomar melodías que después se acompañen, el usuario pidió:
 - Grabar con y sin auriculares y registrar la diferencia.
 - Confirmar que el flujo sigue funcionando sin conexión.
 
-## Decisiones pendientes
+## Decisiones todavía abiertas
 
-- Duración del conteo: ¿un compás, dos, o configurable?
-- Sonido y acento del clic; ¿volumen ajustable?
-- ¿El pulso visual continúa durante toda la toma o sólo al inicio?
-- ¿Se permite grabación sin metrónomo como opción?
+- ¿El conteo debe poder configurarse (medio compás, dos compases)?
+- ¿Volumen y timbre del clic ajustables por el usuario?
+- ¿Compensación de latencia automática cuando se conozca la del equipo?
+- ¿Un modo de conteo sólo visual para tomas sin auriculares?
+
+## Resultado de la implementación
+
+Decisiones tomadas para esta unidad, revisables después de la prueba manual:
+
+- Un compás de 4/4 (cuatro pulsos) al BPM elegido, con acento en el primero.
+  El micrófono se pide antes del conteo y la grabación empieza en el quinto
+  pulso.
+- Clic sintetizado con Web Audio y programado sobre el reloj del
+  `AudioContext`; no agrega archivos ni tráfico de red.
+- El pulso visual sigue durante toda la toma y se calcula desde el
+  `performance.now()` del downbeat, sin sonido y sin acumular deriva.
+- El metrónomo está activado por defecto y se puede desactivar con un
+  interruptor; al desactivarlo se conserva el flujo anterior.
+- Volumen y timbre fijos por ahora. No hay compensación de latencia ni
+  detección automática de tempo.
+- Pruebas: cinco unitarias de temporización y un E2E nativo sintético que
+  comprueba el estado visible, la cancelación del conteo, la liberación del
+  micrófono, que el temporizador no avance durante el conteo y que los clics
+  produzcan señal de audio (`countInPeak` 0.311).
+

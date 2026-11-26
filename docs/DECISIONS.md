@@ -11,6 +11,7 @@ está en el [roadmap](ROADMAP.md).
 | 2026-11-18 | Usar GitHub como registro compartido de código, decisiones y propuestas. | Permite retomar desde otro equipo con los cambios y su contexto. Las propuestas abiertas viven en [docs/proposals](proposals/README.md). |
 | 2026-11-18 | Pausar funcionalidades nuevas hasta hacer la aceptación manual de M01-A. | El recorrido integrado ya pasó en WebView2 con audio simulado. El paso pendiente es probar el resultado con micrófono, oído y archivos reales. |
 | 2026-11-26 | Aceptar M01-A con las limitaciones de transcripción documentadas. | El recorrido manual con voz real, piano, MIDI en MuseScore, reapertura y prueba sin conexión pasó. El usuario aceptó los límites del modelo y pidió registrar propuestas posteriores. |
+| 2026-11-26 | Implementar el metrónomo con conteo audible de un compás y pulso visual. | El usuario pidió «grabar con un metrónomo que dé el inicio auditivo y que luego marque el tempo visualmente»; se implementó en el orden posterior de M01-A. |
 
 ## Cierre de M01-A
 
@@ -40,6 +41,7 @@ sintético anterior ya los cubría.
 La aceptación habilita proponer el hito siguiente, no implementarlo
 automáticamente. Las ideas registradas el 2026-11-26 son: posproceso monofónico
 opcional, selector de tipo de entrada, metrónomo con conteo audible y
-backtracks por estilo. Cada una vive como propuesta con estado explícito en
-[docs/proposals](proposals/README.md). Percusión, armonización y edición
+backtracks por estilo. El metrónomo se implementó en esa fecha; las demás viven
+como propuestas con estado explícito en [docs/proposals](proposals/README.md).
+Percusión, armonización y edición
 multipista requieren su propio alcance y aprobación.

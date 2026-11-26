@@ -9,9 +9,10 @@ multipista, desde una toma o desde una armonía.
 **Estado actual:** M01-A aceptado manualmente el 2026-11-26 con limitaciones de
 transcripción documentadas en [STATUS](docs/STATUS.md): grabación corta, audio
 original conservado, transcripción local con Basic Pitch, notas PPQ, piano
-muestreado local, descarga MIDI y recuperación de tomas. Las mejoras posteriores
-están registradas como [propuestas](docs/proposals/README.md) y todavía no están
-implementadas.
+muestreado local, descarga MIDI y recuperación de tomas. La unidad siguiente,
+el metrónomo con conteo audible y pulso visual, está implementada en desarrollo;
+ver la sección del [STATUS](docs/STATUS.md). Las demás mejoras están registradas
+como [propuestas](docs/proposals/README.md) y todavía no están implementadas.
 
 ## Probar una melodía en este equipo
 
@@ -20,13 +21,22 @@ Set-Location D:\Proyectos\VOXEL
 npm.cmd run desktop:dev:local
 ```
 
-1. Elegí el tempo de la próxima toma (40–240 BPM) y pulsá **Grabar melodía**.
-2. Permití el micrófono, cantá o tarareá una sola línea sin acompañamiento
-   y pulsá **Detener grabación**. Se detiene automáticamente a los 30 segundos.
-3. Pulsá **Transcribir melodía**. La primera ejecución puede tardar;
+1. Elegí el tempo de la próxima toma (40–240 BPM) y la opción de metrónomo
+   (activada por defecto). Pulsá **Grabar melodía**.
+2. Permití el micrófono. Si el metrónomo está activado, escuchá el conteo
+   audible del compás y empezá a cantar en el pulso siguiente; durante la toma
+   las marcas visuales del pulso siguen el tempo sin emitir sonido.
+3. Cantá o tarareá una sola línea sin acompañamiento y pulsá
+   **Detener grabación**. Se detiene automáticamente a los 30 segundos.
+4. Pulsá **Transcribir melodía**. La primera ejecución puede tardar;
    **Cancelar transcripción** detiene el proceso y conserva el proyecto anterior.
-4. Usá **Escuchar piano**, **Descargar MIDI** o el reproductor del original.
-5. Desde **Proyecto guardado → Abrir**, recuperá audio y notas después de reiniciar.
+5. Usá **Escuchar piano**, **Descargar MIDI** o el reproductor del original.
+6. Desde **Proyecto guardado → Abrir**, recuperá audio y notas después de reiniciar.
+
+Con el metrónomo activado, el conteo audible no forma parte del audio grabado:
+la grabación inicia en el pulso de la toma. Usá auriculares para que el clic no
+se filtre al micrófono si usás altavoces. Si lo desactivás, se graba de inmediato
+sin marcas visuales ni conteo.
 
 Las tomas se guardan en `projects/<UUID>` dentro de este workspace en D:.
 Cada grabación crea un proyecto nuevo; las notas no se editan manualmente todavía.
@@ -117,6 +127,7 @@ el bundling está desactivado hasta diseñar distribución y runtime Python.
 - [Rust local en D: y comandos de escritorio](docs/LOCAL-TOOLS.md)
 - [Hitos y criterios de aceptación](docs/ROADMAP.md)
 - [Pruebas y aceptación manual de M01-A](docs/M01-A-TESTING.md)
+- [Metrónomo: conteo audible y pulso visual](docs/STATUS.md#metrónomo-conteo-audible-y-pulso-visual--2026-11-26)
 - [Reglas para agentes](AGENTS.md)
 - [Ejemplo vacío](examples/empty-project.json)
 - [Entorno Basic Pitch y prueba de inferencia local](python/README.md)
@@ -135,4 +146,5 @@ commits efectivos. Desde el 2026-11-18, por instrucción del usuario, cada cambi
 corrección y propuesta debe quedar versionado y enviado a GitHub. Antes de
 cerrar una tarea ejecutar `npm.cmd run sync:check`: exige árbol limpio y HEAD
 igual al upstream recién consultado. Ver [flujo de trabajo](docs/DEVELOPMENT.md).
-La aceptación manual de M01-A está pendiente.
+La aceptación manual de M01-A quedó cerrada el 2026-11-26 con las limitaciones
+registradas en [STATUS](docs/STATUS.md).

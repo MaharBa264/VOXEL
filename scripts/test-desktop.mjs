@@ -94,7 +94,29 @@ try {
   await page.evaluate(async () => { const stream = await window.__voxelSyntheticInput(); window.__voxelResolvePermission(stream); });
   await page.waitForFunction(() => window.__voxelTestStreams.every((stream) => stream.getTracks().every((track) => track.readyState === 'ended')));
   await page.evaluate(() => { navigator.mediaDevices.getUserMedia = window.__voxelSyntheticInput; });
+  assert.equal(await page.getByRole('checkbox').isChecked(), true, 'Metronome is enabled by default');
+  // Cancel a count-in: no take is saved and the microphone is released.
   await page.getByRole('button', { name: /Grabar melodía/ }).click();
+  await page.getByRole('button', { name: /Cancelar conteo/ }).waitFor();
+  const countingElapsed = await page.locator('.time').innerText();
+  await page.getByRole('button', { name: /Cancelar conteo/ }).click();
+  await page.getByText('Conteo cancelado. No se guardó ninguna toma.').waitFor();
+  await page.waitForFunction(() => window.__voxelTestStreams.every((stream) => stream.getTracks().every((track) => track.readyState === 'ended')));
+  // Real take with a one-bar count-in.
+  await page.getByRole('button', { name: /Grabar melodía/ }).click();
+  await page.getByRole('button', { name: /Cancelar conteo/ }).waitFor();
+  const countInPeak = await page.evaluate(async () => {
+    let peak = 0;
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      peak = Math.max(peak, ...window.__voxelTestAnalysers.map((analyser) => {
+        const values = new Float32Array(analyser.fftSize); analyser.getFloatTimeDomainData(values);
+        return Math.max(...values.map(Math.abs));
+      }));
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    return peak;
+  });
+  assert.ok(countInPeak > 0.001, 'Count-in clicks produce a nonzero Web Audio signal');
   await page.getByRole('button', { name: /Detener grabación/ }).waitFor();
   await page.waitForTimeout(2300);
   await page.getByRole('button', { name: /Detener grabación/ }).click();
@@ -103,6 +125,7 @@ try {
     .some((button) => button.textContent.includes('Transcribir melodía') && !button.disabled));
   const captureStates = await page.evaluate(() => window.__voxelTestStreams.flatMap((stream) => stream.getTracks().map((track) => track.readyState)));
   assert.ok(captureStates.length && captureStates.every((state) => state === 'ended'), 'Capture tracks released before transcription');
+  assert.match(countingElapsed, /^00\.0/, 'Count-in does not advance the recording timer');
   await page.getByRole('button', { name: /Transcribir melodía/ }).click();
   await page.waitForFunction(() => [...document.querySelectorAll('button')]
     .some((button) => button.textContent.includes('Escuchar piano') && !button.disabled), null, { timeout: 180000 });
@@ -151,6 +174,7 @@ try {
   assert.deepEqual(consoleErrors, [], 'No browser console errors, including CSP violations');
   await writeFile(join(output, 'report.json'), JSON.stringify({ projectId: ids[0], syntheticInput: true,
     physicalMicrophoneTested: false, permissionDenialAndLateGrant: true, cancellationPreservedProject: true,
+    metronomeDefault: true, countInCanceled: true, countingElapsed, countInPeak,
     midiDownload: true, pianoSignalPeak: peak, captureStates, notes: project.tracks[0].notes,
     externalRequests, errors }, null, 2));
   console.log(`PASS: native WebView2 → real recording → Tauri storage → Python inference → PPQ/MIDI → piano → reopen. Report: ${output}`);

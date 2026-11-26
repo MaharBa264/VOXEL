@@ -17,6 +17,64 @@
   las limitaciones de transcripción documentadas en la sección de aceptación.
 - Se retoma la copia M01-A de D: y se publica su respaldo en GitHub por nueva
   instrucción permanente del usuario del 2026-11-18. Ver registro de sincronización abajo.
+- Metrónomo con conteo audible y pulso visual implementado en desarrollo el
+  2026-11-26; ver la sección correspondiente. Sin cambios en el contrato v1 ni
+  en la inferencia.
+
+## Metrónomo: conteo audible y pulso visual — 2026-11-26
+
+Primera unidad posterior a M01-A, en el orden acordado con el usuario. No
+modifica `src/domain/project.ts`, la transcripción ni el formato de los
+proyectos.
+
+Alcance implementado:
+
+- Un compás de 4 pulsos al tempo elegido (40–240 BPM, 4/4) antes de abrir la
+  toma. El primer pulso se acentúa.
+- El micrófono se concede antes del conteo, pero `MediaRecorder.start()` se
+  ejecuta recién en el quinto pulso: los clics no forman parte del audio
+  grabado.
+- Durante la grabación, cuatro marcas visuales siguen el pulso sin emitir
+  sonido. El reloj se calcula desde el `performance.now()` del downbeat para
+  no acumular deriva.
+- Interruptor «Conteo audible y pulso visual del metrónomo», activado por
+  defecto. Al desactivarlo se conserva el comportamiento anterior: grabar de
+  inmediato y sin marcas.
+- «Cancelar conteo» aborta antes de crear la toma, libera el micrófono y no
+  guarda un proyecto.
+- El temporizador de 30 s empieza con la toma, no con el conteo.
+
+Comandos y resultados:
+
+| Comando | Resultado |
+| --- | --- |
+| `npm.cmd run check` | Código 0: TypeScript, 82 pruebas JS (5 nuevas de metrónomo) y build web |
+| `npm.cmd run test:desktop` | Código 0: PASS del flujo nativo sintético completo |
+| `curl http://127.0.0.1:1420/` | HTTP 200 |
+
+Evidencia sintética (`.cache/desktop-test/3c2f0f1d-7515-414c-8817-501bbd82c75e/report.json`,
+no publicada porque está bajo `/.cache`):
+
+- `metronomeDefault: true`.
+- `countingElapsed: "00.0 / 30 s"`: el conteo no avanza el temporizador.
+- `countInPeak: 0.311` de señal Web Audio: los clics producen audio real.
+- `countInCanceled: true` y todas las pistas del micrófono en `ended`: la
+  cancelación del conteo no crea toma y libera el micrófono.
+- Sin errores de página, de consola ni solicitudes externas.
+
+Límites y pruebas pendientes:
+
+- La verificación es sintética. La escucha del clic y del pulso con micrófono
+  real quedó pendiente de confirmación manual del usuario.
+- No hay compensación de latencia de salida ni de entrada: el primer pulso de
+  la toma puede quedar unos milisegundos después del downbeat. No se promete
+  alineación muestra a muestra.
+- Con altavoces el micrófono puede captar el clic. La interfaz recomienda
+  auriculares, pero no impide grabar sin ellos.
+- El tempo sigue siendo un valor elegido por el usuario; no se detecta
+  automáticamente y no hay cambios de tempo dentro de una toma.
+- El conteo no se guarda como audio y no altera el PPQ ni el compás declarado
+  en el proyecto.
 
 ## Aceptación manual M01-A — 2026-11-26
 

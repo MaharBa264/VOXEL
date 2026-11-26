@@ -5,7 +5,8 @@ Revisión del 25 de noviembre de 2026.
 Actualización del 26 de noviembre: M01-A fue aceptado manualmente con las
 limitaciones de transcripción documentadas en [STATUS.md](STATUS.md). Las ideas
 posteriores están registradas como propuestas en [docs/proposals](proposals/README.md)
-y todavía no están implementadas.
+y el metrónomo con conteo audible y pulso visual fue implementado ese día; las
+otras siguen como propuestas sin implementar.
 
 ## De dónde partimos
 

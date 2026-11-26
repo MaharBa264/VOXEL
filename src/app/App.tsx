@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Project } from '../domain/project';
 import { prepareAnalysis, startRecording, type Recording } from '../audio/capture';
+import { BEATS_PER_BAR, createMetronome, startBeatClock, type Metronome } from '../audio/metronome';
 import { encodeMidi, ticksToSeconds } from '../audio/midi';
 import { PianoPlayer } from '../audio/piano';
 import * as projects from '../services/projects';
 
-type Phase = 'idle' | 'requesting' | 'recording' | 'saving' | 'loading' | 'transcribing' | 'canceling' | 'piano-loading' | 'playing';
+type Phase = 'idle' | 'requesting' | 'counting' | 'recording' | 'saving' | 'loading' | 'transcribing' | 'canceling' | 'piano-loading' | 'playing';
 const statuses: Record<Phase, string> = {
-  idle: 'Listo para crear', requesting: 'Esperando permiso del micrófono…', recording: 'Grabando tu melodía',
-  saving: 'Preparando y guardando audio…', loading: 'Abriendo proyecto…', transcribing: 'Transcribiendo localmente…',
-  canceling: 'Cancelando transcripción…', 'piano-loading': 'Cargando piano…', playing: 'Reproduciendo piano',
+  idle: 'Listo para crear', requesting: 'Esperando permiso del micrófono…', counting: 'Conteo del metrónomo',
+  recording: 'Grabando tu melodía', saving: 'Preparando y guardando audio…', loading: 'Abriendo proyecto…',
+  transcribing: 'Transcribiendo localmente…', canceling: 'Cancelando transcripción…',
+  'piano-loading': 'Cargando piano…', playing: 'Reproduciendo piano',
 };
 const errorText = (error: unknown) => error instanceof Error ? error.message : String(error);
 
@@ -17,6 +19,8 @@ export function App() {
   const [native] = useState(projects.nativeAvailable);
   const [phase, setPhase] = useState<Phase>('idle');
   const [tempo, setTempo] = useState('120');
+  const [metronomeOn, setMetronomeOn] = useState(true);
+  const [beat, setBeat] = useState(-1);
   const [elapsed, setElapsed] = useState(0);
   const [project, setProject] = useState<Project>();
   const [saved, setSaved] = useState<{ id: string; name: string }[]>([]);
@@ -30,11 +34,19 @@ export function App() {
   const recordRun = useRef(0);
   const cancelAck = useRef<Promise<void> | undefined>(undefined);
   const piano = useRef(new PianoPlayer());
+  const metronome = useRef<Metronome | undefined>(undefined);
+  const beatClock = useRef<(() => void) | undefined>(undefined);
   const playRun = useRef(0);
   const audio = useRef<HTMLAudioElement>(null);
   const phaseRef = useRef<Phase>('idle');
   const changePhase = (next: Phase) => { phaseRef.current = next; if (mounted.current) setPhase(next); };
   const currentPhase = (): Phase => phaseRef.current;
+  const getMetronome = () => (metronome.current ??= createMetronome());
+  const stopBeatClock = () => {
+    beatClock.current?.();
+    beatClock.current = undefined;
+    if (mounted.current) setBeat(-1);
+  };
   const idle = phase === 'idle';
   const notes = project?.tracks.flatMap((track) => track.notes) ?? [];
   const tempoValid = Number.isFinite(Number(tempo)) && Number(tempo) >= 40 && Number(tempo) <= 240;
@@ -45,7 +57,8 @@ export function App() {
     if (native) void projects.listProjects().then((items) => { if (mounted.current) setSaved(items); })
       .catch((failure: unknown) => { if (mounted.current) setError(errorText(failure)); });
     return () => {
-      mounted.current = false; playRun.current++; recordRun.current++; captureAbort.current?.abort(); recording.current?.abort(); piano.current.dispose(); audio.current?.pause();
+      mounted.current = false; playRun.current++; recordRun.current++; captureAbort.current?.abort(); recording.current?.abort();
+      beatClock.current?.(); metronome.current?.dispose(); piano.current.dispose(); audio.current?.pause();
       if (phaseRef.current === 'transcribing' || phaseRef.current === 'canceling') void projects.cancelTranscription().catch(() => {});
     };
   }, [native]);
@@ -63,16 +76,34 @@ export function App() {
   };
   const record = async () => {
     if (!native || phaseRef.current !== 'idle' || !tempoValid) return;
-    audio.current?.pause(); setError(''); setElapsed(0); changePhase('requesting');
+    audio.current?.pause(); setError(''); setElapsed(0); setBeat(-1); changePhase('requesting');
     const controller = new AbortController(); captureAbort.current = controller;
     const run = ++recordRun.current;
     const takeTempo = Number(tempo);
+    const withMetronome = metronomeOn;
+    let downbeat = 0;
     try {
-      const take = await startRecording(controller.signal);
+      if (withMetronome) getMetronome().prepare();
+      const take = await startRecording(controller.signal, withMetronome ? {
+        beforeStart: async (countSignal) => {
+          changePhase('counting');
+          downbeat = await getMetronome().countIn(takeTempo, BEATS_PER_BAR, countSignal, (index) => {
+            if (mounted.current) setBeat(index);
+          });
+        },
+      } : undefined);
       if (!mounted.current || run !== recordRun.current) { take.abort(); await take.finished.catch(() => {}); return; }
-      recording.current = take; changePhase('recording');
+      recording.current = take;
+      await take.started;
+      if (!mounted.current || run !== recordRun.current) { take.abort(); await take.finished.catch(() => {}); return; }
+      changePhase('recording');
+      if (withMetronome) beatClock.current = startBeatClock({
+        bpm: takeTempo, origin: downbeat,
+        onBeat: (index) => { if (mounted.current) setBeat(index % BEATS_PER_BAR); },
+      });
       const original = await take.finished; recording.current = undefined;
       if (!mounted.current) return;
+      stopBeatClock();
       changePhase('saving'); const analysis = await prepareAnalysis(original);
       if (!mounted.current) return;
       const next = await projects.saveTake(original, analysis, takeTempo);
@@ -80,7 +111,10 @@ export function App() {
       setProject(next); setSelected(next.id); setSourceUrl(URL.createObjectURL(original));
       setNotice('Grabación guardada. Ya podés transcribirla.'); await refresh();
     } catch (failure) { if (mounted.current && run === recordRun.current) setError(errorText(failure)); }
-    finally { if (run === recordRun.current) { recording.current = undefined; captureAbort.current = undefined; changePhase('idle'); } }
+    finally {
+      stopBeatClock();
+      if (run === recordRun.current) { recording.current = undefined; captureAbort.current = undefined; changePhase('idle'); }
+    }
   };
   const open = async () => {
     if (!native || phaseRef.current !== 'idle' || !selected) return;
@@ -139,19 +173,24 @@ export function App() {
       <section className="capture" aria-labelledby="capture-title">
         <div className="section-top"><span className="step">01 / CAPTURAR</span><span className="muted">Máx. 30 s</span></div>
         <h3 id="capture-title">Una idea, una toma.</h3><p className="muted">Cantá o tarareá una sola melodía, sin acompañamiento.</p>
-        <div className={`record-display ${phase === 'recording' ? 'is-recording' : ''}`}>
+        <div className={`record-display ${phase === 'recording' ? 'is-recording' : ''} ${phase === 'counting' ? 'is-counting' : ''}`}>
           <div className="wave" aria-hidden="true">{Array.from({ length: 29 }, (_, i) => <i key={i} style={{ height: `${14 + ((i * 17 + 9) % 57)}%`, animationDelay: `${i * 0.04}s` }} />)}</div>
+          <div className="beats" aria-hidden="true">{Array.from({ length: BEATS_PER_BAR }, (_, index) => <i key={index} className={beat === index && (phase === 'counting' || phase === 'recording') ? 'is-beat' : ''} />)}</div>
           <p className="time">{phase === 'recording' ? elapsed.toFixed(1).padStart(4, '0') : '00.0'}<span> / 30 s</span></p>
-          <p className="meter-label">{phase === 'recording' ? 'Grabación activa · sin monitor de nivel' : 'El micrófono se activa al grabar'}</p>
+          <p className="meter-label">{phase === 'counting' ? `Conteo ${Math.max(beat + 1, 1)} de ${BEATS_PER_BAR} · empezá a cantar después del ${BEATS_PER_BAR}`
+            : phase === 'recording' ? (metronomeOn ? 'Grabación activa · pulso visual' : 'Grabación activa · sin monitor de nivel')
+            : metronomeOn ? 'Un compás de conteo y después la toma' : 'El micrófono se activa al grabar'}</p>
         </div>
         <div className="capture-actions">
           {phase === 'requesting' ? <button className="primary stop" onClick={() => { recordRun.current++; captureAbort.current?.abort(); captureAbort.current = undefined; changePhase('idle'); setNotice('Solicitud cancelada. El micrófono se liberará si se concede el permiso pendiente.'); }}>Cancelar solicitud</button>
+            : phase === 'counting' ? <button className="primary stop" onClick={() => { recordRun.current++; captureAbort.current?.abort(); captureAbort.current = undefined; recording.current = undefined; stopBeatClock(); changePhase('idle'); setNotice('Conteo cancelado. No se guardó ninguna toma.'); }}>Cancelar conteo</button>
             : phase === 'recording' ? <button className="primary stop" onClick={() => recording.current?.stop()}>■ Detener grabación</button>
             : <button className="primary" disabled={!native || !idle || !tempoValid} onClick={() => void record()}>● Grabar melodía</button>}
           <label className="tempo">Tempo <span><input aria-label="Tempo en BPM para la próxima grabación" type="number" min="40" max="240" step="1" value={tempo} disabled={!native || !idle} onChange={(event) => setTempo(event.target.value)} /> BPM</span></label>
         </div>
+        <label className="metronome-option"><input type="checkbox" checked={metronomeOn} disabled={!native || !idle} onChange={(event) => setMetronomeOn(event.target.checked)} /> <span>Conteo audible y pulso visual del metrónomo</span></label>
         {!tempoValid && <p className="validation">Ingresá un tempo entre 40 y 240 BPM.</p>}
-        <p className="fine-print">Cada toma se guarda como un proyecto nuevo. El audio original se conserva.</p>
+        <p className="fine-print">Cada toma se guarda como un proyecto nuevo. El audio original se conserva.{metronomeOn ? ' Usá auriculares para que el clic no entre en la toma.' : ''}</p>
       </section>
       <section className="result" aria-labelledby="result-title">
         <div className="section-top"><span className="step">02 / TRANSFORMAR</span><span className="muted">Piano · 4/4</span></div>
@@ -171,7 +210,7 @@ export function App() {
         <p className="fine-print">{notes.length ? `${notes.length} notas · ` : ''}Piano: <a href="/piano/ATTRIBUTION.txt" target="_blank" rel="noreferrer">Alexander Holm · CC BY 3.0</a></p>
       </section>
     </div>
-    <div className="status-line" role="status" aria-live="polite"><span className={`status-dot ${idle ? '' : 'active'}`} /><span>{statuses[phase]}</span><span className="status-detail">{idle ? notice : phase === 'transcribing' ? 'La primera ejecución puede tardar. Podés cancelarla.' : 'Esperá a que termine esta operación.'}</span></div>
+    <div className="status-line" role="status" aria-live="polite"><span className={`status-dot ${idle ? '' : 'active'}`} /><span>{statuses[phase]}</span><span className="status-detail">{idle ? notice : phase === 'transcribing' ? 'La primera ejecución puede tardar. Podés cancelarla.' : phase === 'counting' ? 'El conteo no forma parte de la toma.' : 'Esperá a que termine esta operación.'}</span></div>
     {error && <div className="error" role="alert"><strong>No se pudo completar la operación.</strong><p>{error}</p></div>}
     <section className="library" aria-labelledby="library-title">
       <div><span className="step">TU ARCHIVO</span><h3 id="library-title">Retomá una idea.</h3><p className="muted">Recuperá una toma guardada en este equipo.</p></div>
