@@ -76,6 +76,10 @@ Límites y pruebas pendientes:
 - El conteo no se guarda como audio y no altera el PPQ ni el compás declarado
   en el proyecto.
 
+Confirmación manual: el usuario probó el flujo con micrófono real y reportó
+que el conteo audible y el pulso visual funcionan; la unidad quedó cerrada
+sin nuevos errores de interfaz.
+
 ## Aceptación manual M01-A — 2026-11-26
 
 El usuario aceptó M01-A con las limitaciones de transcripción documentadas más
