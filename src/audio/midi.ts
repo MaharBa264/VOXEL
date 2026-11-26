@@ -1,4 +1,4 @@
-import type { MidiNote } from '../domain/project';
+import type { MidiNote, TimeSignature } from '../domain/project';
 
 export function ticksToSeconds(ticks: number, ppq: number, tempoBpm: number): number {
   return ticks / ppq * 60 / tempoBpm;
@@ -11,11 +11,18 @@ function vlq(value: number): number[] {
   return bytes;
 }
 
-export function encodeMidi(notes: readonly MidiNote[], ppq: number, tempoBpm: number): Uint8Array<ArrayBuffer> {
+export function encodeMidi(notes: readonly MidiNote[], ppq: number, tempoBpm: number, timeSignature: TimeSignature): Uint8Array<ArrayBuffer> {
   if (!Number.isInteger(ppq) || ppq < 1 || ppq > 32767 || tempoBpm < 40 || tempoBpm > 240) throw new Error('Tempo o PPQ inválido.');
+  const numerator = Math.trunc(timeSignature.numerator);
+  const denominator = Math.trunc(timeSignature.denominator);
+  const validDenominators = [1, 2, 4, 8, 16, 32, 64, 128];
+  if (!Number.isInteger(numerator) || numerator < 1 || numerator > 255 || !validDenominators.includes(denominator)) {
+    throw new Error('Compás inválido.');
+  }
   const tempo = Math.round(60_000_000 / tempoBpm);
+  const denominatorExponent = Math.round(Math.log2(denominator));
   const track = [0,255,81,3,(tempo >> 16) & 255,(tempo >> 8) & 255,tempo & 255,
-    0,255,88,4,4,2,24,8, 0,192,0];
+    0,255,88,4,numerator,denominatorExponent,24,8, 0,192,0];
   const events = notes.flatMap((note) => [
     { tick: note.startTick, order: 1, bytes: [0x90, note.pitch, note.velocity] },
     { tick: note.startTick + note.durationTicks, order: 0, bytes: [0x80, note.pitch, 0] },

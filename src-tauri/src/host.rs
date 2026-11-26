@@ -94,6 +94,21 @@ fn original_name(mime: &str) -> Result<&'static str> {
         _ => Err("Unsupported audio MIME type".into()),
     }
 }
+fn parse_time_signature(value: &str) -> Result<TimeSignature> {
+    let (numerator, denominator) = value.split_once('/').ok_or("Invalid time signature")?;
+    let numerator: u8 = numerator.parse().map_err(err)?;
+    let denominator: u8 = denominator.parse().map_err(err)?;
+    if numerator < 1 || ![1, 2, 4, 8, 16, 32, 64, 128].contains(&denominator) {
+        return Err("Invalid time signature".into());
+    }
+    Ok(TimeSignature {
+        numerator,
+        denominator,
+    })
+}
+fn format_time_signature(signature: &TimeSignature) -> String {
+    format!("{}/{}", signature.numerator, signature.denominator)
+}
 fn validate_wav(bytes: &[u8], sample_rate: u32, duration: f64) -> Result<f64> {
     if bytes.len() < 44
         || bytes.len() > MAX_BYTES
@@ -192,8 +207,8 @@ fn validate_project(project: &Project, id: &str) -> Result<()> {
         || !project.tempo_bpm.is_finite()
         || project.name.trim().is_empty()
         || project.name.chars().count() > 256
-        || project.time_signature.numerator != 4
-        || project.time_signature.denominator != 4
+        || project.time_signature.numerator < 1
+        || ![1, 2, 4, 8, 16, 32, 64, 128].contains(&project.time_signature.denominator)
         || project.audio_assets.len() != 1
         || project.tracks.len() != 1
     {
@@ -304,7 +319,15 @@ impl Store {
         tempo: f64,
         channels: u8,
         analysis_duration: f64,
+        time_signature: Option<String>,
     ) -> Result<Project> {
+        let time_signature = match time_signature {
+            Some(value) => parse_time_signature(&value)?,
+            None => TimeSignature {
+                numerator: 4,
+                denominator: 4,
+            },
+        };
         let mime = mime
             .split(';')
             .next()
@@ -335,10 +358,7 @@ impl Store {
             name: format!("Toma {}", &id[..8]),
             ppq: 480,
             tempo_bpm: tempo,
-            time_signature: TimeSignature {
-                numerator: 4,
-                denominator: 4,
-            },
+            time_signature,
             audio_assets: vec![AudioAsset {
                 id: "original".into(),
                 path: path.into(),
@@ -373,7 +393,7 @@ impl Store {
         duration: f64,
         tempo: f64,
     ) -> Result<Project> {
-        self.save_with_metadata(original, mime, wav, rate, duration, tempo, 1, duration)
+        self.save_with_metadata(original, mime, wav, rate, duration, tempo, 1, duration, None)
     }
     fn write_new(&self, id: &str, path: &str, bytes: &[u8]) -> Result<()> {
         let mut file = OpenOptions::new()
@@ -624,7 +644,9 @@ impl Host {
             .arg("--tempo")
             .arg(project.tempo_bpm.to_string())
             .arg("--ppq")
-            .arg("480");
+            .arg("480")
+            .arg("--time-signature")
+            .arg(format_time_signature(&project.time_signature));
         if monophonic {
             command.arg("--monophonic");
         }
@@ -703,6 +725,7 @@ pub fn save_take(
     tempo_bpm: f64,
     channels: u8,
     analysis_duration_seconds: f64,
+    time_signature: Option<String>,
 ) -> Result<Project> {
     host.store.save_with_metadata(
         &original,
@@ -713,6 +736,7 @@ pub fn save_take(
         tempo_bpm,
         channels,
         analysis_duration_seconds,
+        time_signature,
     )
 }
 #[tauri::command]
@@ -1063,7 +1087,7 @@ mod tests {
         let store = Store::new(test_root()).unwrap();
         let analysis = wav(16000 * 30, 16000);
         let project = store
-            .save_with_metadata(&[1], "audio/webm", &analysis, 16000, 30.02, 120.0, 2, 30.0)
+            .save_with_metadata(&[1], "audio/webm", &analysis, 16000, 30.02, 120.0, 2, 30.0, None)
             .unwrap();
         assert_eq!(project.audio_assets[0].channels, 2);
         assert_eq!(
@@ -1071,14 +1095,35 @@ mod tests {
             30.02
         );
         assert!(store
-            .save_with_metadata(&[1], "audio/webm", &analysis, 16000, 29.0, 120.0, 2, 30.0)
+            .save_with_metadata(&[1], "audio/webm", &analysis, 16000, 29.0, 120.0, 2, 30.0, None)
             .is_err());
         assert!(store
-            .save_with_metadata(&[1], "audio/webm", &analysis, 16000, 33.0, 120.0, 2, 30.0)
+            .save_with_metadata(&[1], "audio/webm", &analysis, 16000, 33.0, 120.0, 2, 30.0, None)
             .is_err());
         assert!(store
-            .save_with_metadata(&[1], "audio/webm", &analysis, 16000, 30.02, 120.0, 0, 30.0)
+            .save_with_metadata(&[1], "audio/webm", &analysis, 16000, 30.02, 120.0, 0, 30.0, None)
             .is_err());
+    }
+
+    #[test]
+    fn chosen_time_signature_survives_storage_and_rejects_invalid_values() {
+        let store = Store::new(test_root()).unwrap();
+        let analysis = wav(16000, 16000);
+        let project = store
+            .save_with_metadata(&[1], "audio/webm", &analysis, 16000, 1.0, 120.0, 1, 1.0, Some("6/8".into()))
+            .unwrap();
+        let loaded = store.load(&project.id).unwrap();
+        assert_eq!(loaded.time_signature.numerator, 6);
+        assert_eq!(loaded.time_signature.denominator, 8);
+        assert_eq!(format_time_signature(&loaded.time_signature), "6/8");
+        for invalid in ["", "3", "4/3", "0/4", "256/4", "3/4/5", "3/ 4"] {
+            assert!(
+                store
+                    .save_with_metadata(&[1], "audio/webm", &analysis, 16000, 1.0, 120.0, 1, 1.0, Some(invalid.into()))
+                    .is_err(),
+                "Accepted invalid time signature {invalid}"
+            );
+        }
     }
 
     #[test]
@@ -1102,7 +1147,7 @@ mod tests {
         }
         let project = host
             .store
-            .save(&tone, "audio/wav", &tone, 16000, 2.0, 120.0)
+            .save_with_metadata(&tone, "audio/wav", &tone, 16000, 2.0, 120.0, 1, 2.0, Some("3/4".into()))
             .unwrap();
         let result = host
             .transcribe(&project.id, host.job.begin().unwrap(), false, "voice")
@@ -1110,6 +1155,14 @@ mod tests {
         assert!(
             result.tracks[0].notes.iter().any(|n| n.pitch == 69),
             "Expected actual model to detect A4"
+        );
+        let midi = host
+            .store
+            .read(&project.id, "melody.mid", 2 * 1024 * 1024)
+            .unwrap();
+        assert!(
+            midi.windows(8).any(|window| window == [0, 255, 88, 4, 3, 2, 24, 8]),
+            "Worker MIDI must carry the project's 3/4 time signature"
         );
         assert_eq!(
             host.store.load(&project.id).unwrap().tracks[0].notes.len(),

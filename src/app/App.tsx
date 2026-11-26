@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Project } from '../domain/project';
+import type { Project, TimeSignature } from '../domain/project';
 import { prepareAnalysis, startRecording, type Recording } from '../audio/capture';
-import { BEATS_PER_BAR, createMetronome, startBeatClock, type Metronome } from '../audio/metronome';
+import { createMetronome, startBeatClock, type Metronome } from '../audio/metronome';
 import { encodeMidi, ticksToSeconds } from '../audio/midi';
 import { PianoPlayer } from '../audio/piano';
 import * as projects from '../services/projects';
@@ -14,6 +14,11 @@ const statuses: Record<Phase, string> = {
   'piano-loading': 'Cargando piano…', playing: 'Reproduciendo piano',
 };
 const errorText = (error: unknown) => error instanceof Error ? error.message : String(error);
+const TIME_SIGNATURES: TimeSignature[] = [
+  { numerator: 2, denominator: 4 }, { numerator: 3, denominator: 4 },
+  { numerator: 4, denominator: 4 }, { numerator: 6, denominator: 8 },
+  { numerator: 9, denominator: 8 }, { numerator: 12, denominator: 8 },
+];
 
 export function App() {
   const [native] = useState(projects.nativeAvailable);
@@ -22,6 +27,7 @@ export function App() {
   const [metronomeOn, setMetronomeOn] = useState(true);
   const [monophonic, setMonophonic] = useState(false);
   const [inputKind, setInputKind] = useState('voice');
+  const [timeSignature, setTimeSignature] = useState<TimeSignature>({ numerator: 4, denominator: 4 });
   const [beat, setBeat] = useState(-1);
   const [elapsed, setElapsed] = useState(0);
   const [project, setProject] = useState<Project>();
@@ -50,6 +56,9 @@ export function App() {
     if (mounted.current) setBeat(-1);
   };
   const idle = phase === 'idle';
+  const beatsPerBar = Math.trunc(timeSignature.numerator);
+  const meterLabel = `${timeSignature.numerator}/${timeSignature.denominator}`;
+  const projectMeterLabel = project ? `${project.timeSignature.numerator}/${project.timeSignature.denominator}` : meterLabel;
   const notes = project?.tracks.flatMap((track) => track.notes) ?? [];
   const tempoValid = Number.isFinite(Number(tempo)) && Number(tempo) >= 40 && Number(tempo) <= 240;
   const duration = project?.audioAssets[0]?.durationSeconds ?? 0;
@@ -89,7 +98,7 @@ export function App() {
       const take = await startRecording(controller.signal, withMetronome ? {
         beforeStart: async (countSignal) => {
           changePhase('counting');
-          downbeat = await getMetronome().countIn(takeTempo, BEATS_PER_BAR, countSignal, (index) => {
+          downbeat = await getMetronome().countIn(takeTempo, timeSignature, countSignal, (index) => {
             if (mounted.current) setBeat(index);
           });
         },
@@ -100,15 +109,15 @@ export function App() {
       if (!mounted.current || run !== recordRun.current) { take.abort(); await take.finished.catch(() => {}); return; }
       changePhase('recording');
       if (withMetronome) beatClock.current = startBeatClock({
-        bpm: takeTempo, origin: downbeat,
-        onBeat: (index) => { if (mounted.current) setBeat(index % BEATS_PER_BAR); },
+        bpm: takeTempo, timeSignature, origin: downbeat,
+        onBeat: (index) => { if (mounted.current) setBeat(index % beatsPerBar); },
       });
       const original = await take.finished; recording.current = undefined;
       if (!mounted.current) return;
       stopBeatClock();
       changePhase('saving'); const analysis = await prepareAnalysis(original);
       if (!mounted.current) return;
-      const next = await projects.saveTake(original, analysis, takeTempo);
+      const next = await projects.saveTake(original, analysis, takeTempo, timeSignature);
       if (!mounted.current) return;
       setProject(next); setSelected(next.id); setSourceUrl(URL.createObjectURL(original));
       setNotice('Grabación guardada. Ya podés transcribirla.'); await refresh();
@@ -125,6 +134,7 @@ export function App() {
       const [next, original] = await Promise.all([projects.loadProject(selected), projects.originalAudio(selected)]);
       if (!mounted.current) return;
       setProject(next); setSourceUrl(URL.createObjectURL(original)); setTempo(String(next.tempoBpm));
+      setTimeSignature(next.timeSignature);
       setNotice(next.tracks.some((track) => track.notes.length) ? 'Proyecto recuperado con su audio y sus notas.' : 'Proyecto recuperado. Podés transcribir su audio.');
     } catch (failure) { if (mounted.current) setError(errorText(failure)); }
     finally { changePhase('idle'); }
@@ -161,7 +171,7 @@ export function App() {
   const download = () => {
     if (!project || !notes.length || !idle) return;
     try {
-      const url = URL.createObjectURL(new Blob([encodeMidi(notes, project.ppq, project.tempoBpm)], { type: 'audio/midi' }));
+      const url = URL.createObjectURL(new Blob([encodeMidi(notes, project.ppq, project.tempoBpm, project.timeSignature)], { type: 'audio/midi' }));
       const link = document.createElement('a'); link.href = url; link.download = 'melody.mid'; link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (failure) { setError(errorText(failure)); }
@@ -177,9 +187,9 @@ export function App() {
         <h3 id="capture-title">Una idea, una toma.</h3><p className="muted">Cantá o tarareá una sola melodía, sin acompañamiento.</p>
         <div className={`record-display ${phase === 'recording' ? 'is-recording' : ''} ${phase === 'counting' ? 'is-counting' : ''}`}>
           <div className="wave" aria-hidden="true">{Array.from({ length: 29 }, (_, i) => <i key={i} style={{ height: `${14 + ((i * 17 + 9) % 57)}%`, animationDelay: `${i * 0.04}s` }} />)}</div>
-          <div className="beats" aria-hidden="true">{Array.from({ length: BEATS_PER_BAR }, (_, index) => <i key={index} className={beat === index && (phase === 'counting' || phase === 'recording') ? 'is-beat' : ''} />)}</div>
+          <div className="beats" aria-hidden="true">{Array.from({ length: beatsPerBar }, (_, index) => <i key={index} className={beat === index && (phase === 'counting' || phase === 'recording') ? 'is-beat' : ''} />)}</div>
           <p className="time">{phase === 'recording' ? elapsed.toFixed(1).padStart(4, '0') : '00.0'}<span> / 30 s</span></p>
-          <p className="meter-label">{phase === 'counting' ? `Conteo ${Math.max(beat + 1, 1)} de ${BEATS_PER_BAR} · empezá a cantar después del ${BEATS_PER_BAR}`
+          <p className="meter-label">{phase === 'counting' ? `Conteo ${Math.max(beat + 1, 1)} de ${beatsPerBar} · empezá a cantar después del ${beatsPerBar}`
             : phase === 'recording' ? (metronomeOn ? 'Grabación activa · pulso visual' : 'Grabación activa · sin monitor de nivel')
             : metronomeOn ? 'Un compás de conteo y después la toma' : 'El micrófono se activa al grabar'}</p>
         </div>
@@ -189,6 +199,10 @@ export function App() {
             : phase === 'recording' ? <button className="primary stop" onClick={() => recording.current?.stop()}>■ Detener grabación</button>
             : <button className="primary" disabled={!native || !idle || !tempoValid} onClick={() => void record()}>● Grabar melodía</button>}
           <label className="tempo">Tempo <span><input aria-label="Tempo en BPM para la próxima grabación" type="number" min="40" max="240" step="1" value={tempo} disabled={!native || !idle} onChange={(event) => setTempo(event.target.value)} /> BPM</span></label>
+          <label className="tempo">Compás <span><select aria-label="Compás para la próxima grabación" value={meterLabel} disabled={!native || !idle} onChange={(event) => {
+            const selected = TIME_SIGNATURES.find((signature) => `${signature.numerator}/${signature.denominator}` === event.target.value);
+            if (selected) setTimeSignature(selected);
+          }}>{TIME_SIGNATURES.map((signature) => <option key={`${signature.numerator}/${signature.denominator}`} value={`${signature.numerator}/${signature.denominator}`}>{signature.numerator}/{signature.denominator}</option>)}</select></span></label>
         </div>
         <label className="metronome-option"><input type="checkbox" checked={metronomeOn} disabled={!native || !idle} onChange={(event) => setMetronomeOn(event.target.checked)} /> <span>Conteo audible y pulso visual del metrónomo</span></label>
         <label className="postprocess-option"><input type="checkbox" checked={monophonic} disabled={!native || !idle} onChange={(event) => setMonophonic(event.target.checked)} /> <span>Post-proceso monofónico: quitar armónicos y notas duplicadas</span></label>
@@ -196,8 +210,8 @@ export function App() {
         <p className="fine-print">Cada toma se guarda como un proyecto nuevo. El audio original se conserva.{metronomeOn ? ' Usá auriculares para que el clic no entre en la toma.' : ''}</p>
       </section>
       <section className="result" aria-labelledby="result-title">
-        <div className="section-top"><span className="step">02 / TRANSFORMAR</span><span className="muted">Piano · 4/4</span></div>
-        <h3 id="result-title">De melodía a notas.</h3><p className="muted">{project ? `${duration.toFixed(1)} s · ${project.tempoBpm} BPM · ${project.ppq} PPQ` : 'Tu próxima melodía comienza acá.'}</p>
+        <div className="section-top"><span className="step">02 / TRANSFORMAR</span><span className="muted">Piano · {projectMeterLabel}</span></div>
+        <h3 id="result-title">De melodía a notas.</h3><p className="muted">{project ? `${duration.toFixed(1)} s · ${project.tempoBpm} BPM · ${projectMeterLabel} · ${project.ppq} PPQ` : 'Tu próxima melodía comienza acá.'}</p>
         <div className="notes-preview" aria-label={notes.length ? `${notes.length} notas detectadas` : 'Todavía no hay notas'}>
           {notes.length && project ? <svg viewBox="0 0 600 130" role="img" aria-label="Vista de las notas transcritas">
             {notes.map((note, index) => <rect key={`${note.id}-${index}`} x={ticksToSeconds(note.startTick, project.ppq, project.tempoBpm) / Math.max(duration, .1) * 590} y={112 - note.pitch / 127 * 104} width={Math.max(2, ticksToSeconds(note.durationTicks, project.ppq, project.tempoBpm) / Math.max(duration, .1) * 590)} height="5" rx="2" />)}

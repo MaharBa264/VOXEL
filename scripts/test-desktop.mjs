@@ -98,6 +98,10 @@ try {
   assert.equal(await metronomeToggle.isChecked(), true, 'Metronome is enabled by default');
   const monophonicToggle = page.getByRole('checkbox', { name: /Post-proceso monofónico/ });
   assert.equal(await monophonicToggle.isChecked(), false, 'Monophonic post-process is disabled by default');
+  const meterSelect = page.getByRole('combobox', { name: /Compás para la próxima grabación/ });
+  assert.equal(await meterSelect.inputValue(), '4/4', 'Default meter is 4/4');
+  await meterSelect.selectOption('3/4');
+  assert.equal(await meterSelect.inputValue(), '3/4');
   // Cancel a count-in: no take is saved and the microphone is released.
   await page.getByRole('button', { name: /Grabar melodía/ }).click();
   await page.getByRole('button', { name: /Cancelar conteo/ }).waitFor();
@@ -137,6 +141,7 @@ try {
   const projectPath = join(storage, ids[0]);
   const project = JSON.parse(await readFile(join(projectPath, 'project.json'), 'utf8'));
   assert.equal(project.schemaVersion, 1); assert.equal(project.ppq, 480);
+  assert.deepEqual(project.timeSignature, { numerator: 3, denominator: 4 }, 'Chosen meter is persisted');
   assert.ok(project.tracks[0].notes.some((note) => note.pitch === 69), 'Real inference detects A4');
   assert.ok((await readFile(join(projectPath, project.audioAssets[0].path))).length > 0);
   assert.ok((await readFile(join(projectPath, 'melody.mid'))).subarray(0, 4).equals(Buffer.from('MThd')));
@@ -178,6 +183,7 @@ try {
   await writeFile(join(output, 'report.json'), JSON.stringify({ projectId: ids[0], syntheticInput: true,
     physicalMicrophoneTested: false, permissionDenialAndLateGrant: true, cancellationPreservedProject: true,
     metronomeDefault: true, countInCanceled: true, countingElapsed, countInPeak,
+    timeSignature: project.timeSignature,
     midiDownload: true, pianoSignalPeak: peak, captureStates, notes: project.tracks[0].notes,
     externalRequests, errors }, null, 2));
   console.log(`PASS: native WebView2 → real recording → Tauri storage → Python inference → PPQ/MIDI → piano → reopen. Report: ${output}`);

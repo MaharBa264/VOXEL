@@ -1,12 +1,13 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
-import { parseProject } from '../domain/project';
+import { parseProject, type TimeSignature } from '../domain/project';
 
 export const nativeAvailable = () => typeof window !== 'undefined' && isTauri();
-export async function saveTake(original: Blob, analysis: { wav: ArrayBuffer; sampleRateHz: number; durationSeconds: number; channels: number; analysisDurationSeconds: number }, tempoBpm: number) {
+export async function saveTake(original: Blob, analysis: { wav: ArrayBuffer; sampleRateHz: number; durationSeconds: number; channels: number; analysisDurationSeconds: number }, tempoBpm: number, timeSignature: TimeSignature) {
   return parseProject(await invoke('save_take', {
     original: Array.from(new Uint8Array(await original.arrayBuffer())), mimeType: original.type,
     wav: Array.from(new Uint8Array(analysis.wav)), sampleRateHz: analysis.sampleRateHz,
     durationSeconds: analysis.durationSeconds, channels: analysis.channels, analysisDurationSeconds: analysis.analysisDurationSeconds, tempoBpm,
+    timeSignature: `${timeSignature.numerator}/${timeSignature.denominator}`,
   }));
 }
 export async function listProjects(): Promise<{ id: string; name: string }[]> {

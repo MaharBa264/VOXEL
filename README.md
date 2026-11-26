@@ -11,9 +11,10 @@ transcripción documentadas en [STATUS](docs/STATUS.md): grabación corta, audio
 original conservado, transcripción local con Basic Pitch, notas PPQ, piano
 muestreado local, descarga MIDI y recuperación de tomas. Las unidades siguientes
 implementadas en desarrollo son el metrónomo con conteo audible y pulso visual,
-el post-proceso monofónico opcional y el selector de tipo de entrada (voz
-soportada por el motor actual); las demás mejoras están registradas como
-[propuestas](docs/proposals/README.md) y todavía no están implementadas.
+el post-proceso monofónico opcional, el selector de tipo de entrada (voz
+soportada por el motor actual) y el compás configurable por toma; las demás
+mejoras están registradas como [propuestas](docs/proposals/README.md) y todavía
+no están implementadas.
 
 ## Probar una melodía en este equipo
 
@@ -22,11 +23,12 @@ Set-Location D:\Proyectos\VOXEL
 npm.cmd run desktop:dev:local
 ```
 
-1. Elegí el tempo de la próxima toma (40–240 BPM) y la opción de metrónomo
-   (activada por defecto). Pulsá **Grabar melodía**.
-2. Permití el micrófono. Si el metrónomo está activado, escuchá el conteo
-   audible del compás y empezá a cantar en el pulso siguiente; durante la toma
-   las marcas visuales del pulso siguen el tempo sin emitir sonido.
+1. Elegí el tempo de la próxima toma (40–240 BPM), el compás (2/4, 3/4, 4/4,
+   6/8, 9/8 o 12/8; por defecto 4/4) y la opción de metrónomo (activada por
+   defecto). Pulsá **Grabar melodía**.
+2. Permití el micrófono. Si el metrónomo está activado, escuchá un compás de
+   conteo y empezá a cantar en el pulso siguiente; durante la toma las marcas
+   visuales siguen el compás elegido sin emitir sonido.
 3. Cantá o tarareá una sola línea sin acompañamiento y pulsá
    **Detener grabación**. Se detiene automáticamente a los 30 segundos.
 4. Pulsá **Transcribir melodía**. La primera ejecución puede tardar;
@@ -41,7 +43,7 @@ sin marcas visuales ni conteo.
 
 Las tomas se guardan en `projects/<UUID>` dentro de este workspace en D:.
 Cada grabación crea un proyecto nuevo; las notas no se editan manualmente todavía.
-El tempo de una toma guardada queda fijado. La vista `npm run dev` en el
+El tempo y el compás de una toma guardada quedan fijados. La vista `npm run dev` en el
 navegador muestra la interfaz, pero exige la app nativa para estos flujos.
 Esta versión de desarrollo necesita el workspace y `.venv`; no es un instalador independiente.
 

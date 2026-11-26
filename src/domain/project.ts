@@ -45,17 +45,19 @@ function isPortableAudioPath(path: string): boolean {
   );
 }
 
+export const TimeSignatureSchema = z.strictObject({
+  numerator: z.number().int().min(1).max(255),
+  denominator: z.union([z.literal(1), z.literal(2), z.literal(4), z.literal(8),
+    z.literal(16), z.literal(32), z.literal(64), z.literal(128)]),
+});
+
 export const ProjectSchema = z.strictObject({
   schemaVersion: z.literal(1),
   id,
   name,
   ppq: z.number().int().min(1).max(32767),
   tempoBpm: z.number().positive(),
-  timeSignature: z.strictObject({
-    numerator: z.number().int().min(1).max(255),
-    denominator: z.union([z.literal(1), z.literal(2), z.literal(4), z.literal(8),
-      z.literal(16), z.literal(32), z.literal(64), z.literal(128)]),
-  }),
+  timeSignature: TimeSignatureSchema,
   audioAssets: z.array(AudioAssetSchema),
   tracks: z.array(TrackSchema),
 }).superRefine((project, ctx) => {
@@ -81,6 +83,7 @@ export const ProjectSchema = z.strictObject({
 });
 
 export type MidiNote = z.infer<typeof MidiNoteSchema>;
+export type TimeSignature = z.infer<typeof TimeSignatureSchema>;
 export type Project = z.infer<typeof ProjectSchema>;
 
 export function parseProject(input: unknown): Project {

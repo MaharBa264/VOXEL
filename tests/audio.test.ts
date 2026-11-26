@@ -36,7 +36,7 @@ describe('secuencia PPQ y exportación MIDI', () => {
     expect(ticksToSeconds(1, 480, 60)).toBeCloseTo(1 / 480);
   });
   it('exporta tempo y una nota con duración VLQ exacta en formato SMF 0', () => {
-    const bytes = encodeMidi([{ id: 'n1', pitch: 69, velocity: 100, startTick: 0, durationTicks: 480 }], 480, 120);
+    const bytes = encodeMidi([{ id: 'n1', pitch: 69, velocity: 100, startTick: 0, durationTicks: 480 }], 480, 120, { numerator: 4, denominator: 4 });
     expect(Array.from(bytes.slice(0, 14))).toEqual([77,84,104,100,0,0,0,6,0,0,0,1,1,224]);
     expect(Array.from(bytes.slice(22))).toEqual([
       0,255,81,3,7,161,32, 0,255,88,4,4,2,24,8,
@@ -44,11 +44,18 @@ describe('secuencia PPQ y exportación MIDI', () => {
     ]);
     expect(new DataView(bytes.buffer).getUint32(18)).toBe(bytes.length - 22);
   });
+  it('exporta el compás pedido en lugar del 4/4 fijo', () => {
+    const bytes = encodeMidi([{ id: 'n1', pitch: 69, velocity: 100, startTick: 0, durationTicks: 480 }], 480, 120, { numerator: 3, denominator: 4 });
+    expect(Array.from(bytes.slice(22))).toEqual([
+      0,255,81,3,7,161,32, 0,255,88,4,3,2,24,8,
+      0,192,0, 0,144,69,100, 131,96,128,69,0, 0,255,47,0,
+    ]);
+  });
   it('ordena note-off antes del siguiente note-on en un mismo tick', () => {
     const bytes = encodeMidi([
       { id: 'b', pitch: 60, velocity: 90, startTick: 480, durationTicks: 480 },
       { id: 'a', pitch: 60, velocity: 90, startTick: 0, durationTicks: 480 },
-    ], 480, 120);
+    ], 480, 120, { numerator: 4, denominator: 4 });
     expect(Array.from(bytes.slice(44, 53))).toEqual([131,96,128,60,0,0,144,60,90]);
   });
 });

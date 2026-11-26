@@ -14,6 +14,7 @@ está en el [roadmap](ROADMAP.md).
 | 2026-11-26 | Implementar el metrónomo con conteo audible y pulso visual. | El usuario pidió «grabar con un metrónomo que dé el inicio auditivo y que luego marque el tempo visualmente»; se implementó en el orden posterior de M01-A. |
 | 2026-11-26 | Implementar el post-proceso monofónico opcional (filtro de armónicos). | El usuario pidió «agregar un postproceso monofónico opcional»; se implementó como filtro en el worker con interruptor desactivado por defecto, sin cambiar el contrato v1. |
 | 2026-11-26 | Conectar el selector de tipo de entrada (voz, silbido, percusión) al worker. | El usuario pidió el switch de tarareo/silbido/percusión; se implementó el cableado con el motor actual atendiendo sólo `voice`. |
+| 2026-11-26 | Hacer configurable el compás por toma, además del tempo. | El usuario lo pidió como detalle previo a los backtracks. Se eligió un selector en la captura, persistencia en el proyecto v1 y envío al worker para el MIDI; el BPM sigue refiriéndose a la negra y el conteo usa la unidad del denominador. |
 | 2026-11-26 | Implementar el metrónomo con conteo audible de un compás y pulso visual. | El usuario pidió «grabar con un metrónomo que dé el inicio auditivo y que luego marque el tempo visualmente»; se implementó en el orden posterior de M01-A. |
 
 ## Cierre de M01-A

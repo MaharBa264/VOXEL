@@ -2,8 +2,9 @@
 
 **Estado:** implementada en desarrollo el 2026-11-26. Ver la evidencia en
 [STATUS](../STATUS.md#metrónomo-conteo-audible-y-pulso-visual--2026-11-26).
-La prueba es sintética; la escucha con micrófono real quedó pendiente de
-confirmación manual.
+La prueba automatizada es sintética; el usuario confirmó manualmente el conteo
+y el pulso con micrófono real. Desde el 2026-11-26 el compás del conteo se puede
+elegir: [propuesta](2026-11-26-time-signature.md).
 
 ## Problema y contexto
 

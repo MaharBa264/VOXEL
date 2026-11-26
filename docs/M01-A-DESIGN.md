@@ -6,7 +6,10 @@ notas PPQ, exportación MIDI y reproducción con piano. Sin percusión ni armoni
 Se mantiene React/Tauri/Python/Tone y contrato de proyecto v1. Captura con
 MediaRecorder (hasta 30 segundos), conservando el blob original. Web Audio
 decodifica y genera un derivado WAV PCM16 mono; no sustituye el original.
-Tempo editable 40–240 BPM, PPQ 480, compás 4/4, piano GM programa 0.
+Tempo editable 40–240 BPM, PPQ 480, compás 4/4, piano GM programa 0. Este
+documento describe el alcance original de M01-A; desde el 2026-11-26 el compás
+se puede elegir por toma, según
+[la propuesta](proposals/2026-11-26-time-signature.md).
 
 Rust crea carpetas `projects/<UUID>` dentro del workspace de desarrollo en D:;
 no acepta rutas arbitrarias del frontend. Guarda `audio/original.<ext>`,

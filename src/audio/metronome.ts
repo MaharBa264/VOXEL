@@ -6,10 +6,13 @@
  * testable without an audio device.
  */
 
+import type { TimeSignature } from '../domain/project';
+
 export const BEATS_PER_BAR = 4;
 
 export interface BeatClockOptions {
   bpm: number;
+  timeSignature: TimeSignature;
   /** `performance.now()` value of beat 0. It may be in the future. */
   origin: number;
   onBeat: (index: number) => void;
@@ -20,11 +23,12 @@ export interface Metronome {
   /** Creates and resumes the audio clock while the page still has user activation. */
   prepare(): void;
   /**
-   * Plays `beats` audible clicks, accents the first one and resolves with the
-   * `performance.now()` value of the following downbeat. The clicks are
-   * scheduled before that downbeat so the recorder can start without them.
+   * Plays `beats` audible clicks (one bar of the meter), accents the first one
+   * and resolves with the `performance.now()` value of the following downbeat.
+   * The clicks are scheduled before that downbeat so the recorder can start
+   * without them.
    */
-  countIn(bpm: number, beats: number, signal: AbortSignal, onBeat?: (beat: number) => void): Promise<number>;
+  countIn(bpm: number, timeSignature: TimeSignature, signal: AbortSignal, onBeat?: (beat: number) => void): Promise<number>;
   dispose(): void;
 }
 
@@ -38,15 +42,16 @@ export function countInMilliseconds(bpm: number, beats: number = BEATS_PER_BAR):
   return beatPeriodMs(bpm) * beats;
 }
 
-/** Calls `onBeat` once per beat index, computed from the clock to avoid drift. */
-export function startBeatClock({ bpm, origin, onBeat, now = () => performance.now() }: BeatClockOptions): () => void {
-  const period = beatPeriodMs(bpm);
+/** Calls `onBeat` once per beat of the meter, computed from the clock to avoid drift. */
+export function startBeatClock({ bpm, timeSignature, origin, onBeat, now = () => performance.now() }: BeatClockOptions): () => void {
+  const period = beatPeriodMs(bpm) * (4 / timeSignature.denominator);
+  const beatsPerBar = Math.trunc(timeSignature.numerator);
   let last = -1;
   const tick = () => {
     const index = Math.floor((now() - origin) / period);
     if (index === last) return;
     last = index;
-    if (index >= 0) onBeat(index);
+    if (index >= 0) onBeat(index % beatsPerBar);
   };
   tick();
   const timer = setInterval(tick, Math.max(16, Math.min(50, period / 8)));
@@ -105,11 +110,12 @@ export function createMetronome(): Metronome {
       const ctx = audio();
       if (ctx.state === 'suspended') void ctx.resume();
     },
-    async countIn(bpm, beats, signal, onBeat) {
+    async countIn(bpm, timeSignature, signal, onBeat) {
       const ctx = audio();
       if (ctx.state === 'suspended') await ctx.resume();
       if (signal.aborted) throw new Error('Grabación cancelada.');
-      const periodSeconds = beatPeriodMs(bpm) / 1000;
+      const periodSeconds = beatPeriodMs(bpm) / 1000 * (4 / timeSignature.denominator);
+      const beats = Math.trunc(timeSignature.numerator);
       const contextAtSchedule = ctx.currentTime;
       const performanceAtSchedule = performance.now();
       const first = contextAtSchedule + 0.15;
@@ -118,7 +124,7 @@ export function createMetronome(): Metronome {
       const firstBeat = performanceAtSchedule + (first - contextAtSchedule) * 1000;
       const downbeat = firstBeat + beats * periodMs;
       const stopClock = onBeat
-        ? startBeatClock({ bpm, origin: firstBeat, onBeat: (index) => { if (index < beats) onBeat(index); } })
+        ? startBeatClock({ bpm, timeSignature, origin: firstBeat, onBeat: (index) => { if (index < beats) onBeat(index); } })
         : undefined;
       try {
         await waitUntil(downbeat, signal);

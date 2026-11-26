@@ -127,10 +127,26 @@ def variable_length(value):
     return bytes(data)
 
 
-def midi_bytes(notes, tempo, ppq):
+def parse_time_signature(value):
+    if not isinstance(value, str) or '/' not in value:
+        raise ValueError('Time signature must be a string like "3/4"')
+    numerator, _, denominator = value.partition('/')
+    try:
+        parsed_numerator, parsed_denominator = int(numerator), int(denominator)
+    except ValueError as error:
+        raise ValueError('Invalid time signature') from error
+    valid = (1, 2, 4, 8, 16, 32, 64, 128)
+    if parsed_numerator < 1 or parsed_numerator > 255 or parsed_denominator not in valid:
+        raise ValueError('Invalid time signature')
+    return parsed_numerator, parsed_denominator
+
+
+def midi_bytes(notes, tempo, ppq, time_signature=(4, 4)):
     """Format 0, piano channel 0; events come exclusively from converted PPQ notes."""
     microseconds = nearest(60_000_000 / tempo)
-    track = bytearray(b'\x00\xff\x51\x03' + microseconds.to_bytes(3, 'big') + b'\x00\xc0\x00')
+    numerator, denominator = time_signature
+    denominator_exponent = int(round(math.log2(denominator)))
+    track = bytearray(b'\x00\xff\x51\x03' + microseconds.to_bytes(3, 'big') + bytes((0, 255, 88, 4, numerator, denominator_exponent, 24, 8)) + b'\x00\xc0\x00')
     events = []
     for note in notes:
         start = note['startTick']
@@ -162,12 +178,13 @@ def validate_input_kind(value):
         raise ValueError('Unsupported input kind; only "voice" is supported by the local engine')
 
 
-def transcribe(source, output, midi, tempo, ppq, monophonic=False, input_kind='voice'):
+def transcribe(source, output, midi, tempo, ppq, monophonic=False, input_kind='voice', time_signature=None):
     if not math.isfinite(tempo) or not 40 <= tempo <= 240:
         raise ValueError('Tempo must be finite and between 40 and 240 BPM')
     if isinstance(ppq, bool) or not isinstance(ppq, int) or not 1 <= ppq <= 32767:
         raise ValueError('PPQ must be an integer between 1 and 32767')
     validate_input_kind(input_kind)
+    parsed_time_signature = parse_time_signature(time_signature or '4/4')
     source, output, midi = validate_paths(source, output, midi)
     configure_environment()
     duration, silence = read_audio(source)
@@ -175,7 +192,7 @@ def transcribe(source, output, midi, tempo, ppq, monophonic=False, input_kind='v
     if monophonic:
         notes = select_monophonic(notes)
     result = {'protocolVersion': 1, 'notes': notes, 'silence': silence}
-    payloads = [(midi, midi_bytes(notes, tempo, ppq)),
+    payloads = [(midi, midi_bytes(notes, tempo, ppq, parsed_time_signature)),
                 (output, (json.dumps(result, allow_nan=False) + '\n').encode('utf-8'))]
     staged = []
     try:
@@ -204,9 +221,10 @@ def main():
     parser.add_argument('--ppq', required=True, type=int)
     parser.add_argument('--monophonic', action='store_true')
     parser.add_argument('--input-kind', default='voice')
+    parser.add_argument('--time-signature', default='4/4')
     args = parser.parse_args()
     try:
-        transcribe(args.input, args.output, args.midi, args.tempo, args.ppq, args.monophonic, args.input_kind)
+        transcribe(args.input, args.output, args.midi, args.tempo, args.ppq, args.monophonic, args.input_kind, args.time_signature)
     except Exception as error:
         print(f'Transcription failed: {error}', file=sys.stderr)
         return 1

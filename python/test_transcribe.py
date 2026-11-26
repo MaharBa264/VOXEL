@@ -138,6 +138,22 @@ class WorkerTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.worker.transcribe(source, p / 'out.json', p / 'out.mid', 120, 480, input_kind='percussion')
 
+    def test_time_signature_is_written_to_midi_and_validated(self):
+        self.assertEqual(self.worker.parse_time_signature('6/8'), (6, 8))
+        for invalid in ['', '3', '4/3', '0/4', '256/4', '3/4/5']:
+            with self.subTest(value=invalid), self.assertRaises(ValueError):
+                self.worker.parse_time_signature(invalid)
+        midi = self.worker.midi_bytes([], 120, 480, (3, 4))
+        self.assertIn(bytes((0, 255, 88, 4, 3, 2, 24, 8)), midi)
+        self.assertEqual(self.worker.midi_bytes([], 120, 480), self.worker.midi_bytes([], 120, 480, (4, 4)))
+
+    def test_worker_honors_requested_time_signature(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / '.cache') as folder:
+            p = Path(folder); source = p / 'in.wav'
+            wav(source, [1] * 22050)
+            self.worker.transcribe(source, p / 'out.json', p / 'out.mid', 120, 480, time_signature='6/8')
+            self.assertIn(bytes((0, 255, 88, 4, 6, 3, 24, 8)), (p / 'out.mid').read_bytes())
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

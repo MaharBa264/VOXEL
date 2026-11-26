@@ -57,8 +57,9 @@ en [STATUS](STATUS.md).
 
 ## Propuestas posteriores a M01-A — 2026-11-26
 
-Solicitadas por el usuario. El metrónomo ya está implementado en desarrollo;
-las otras tres siguen siendo propuestas:
+Solicitadas por el usuario. Metrónomo, posproceso, selector de entrada y compás
+ya están implementados en desarrollo; los backtracks por estilo siguen como
+propuesta:
 
 - [x] Posproceso monofónico opcional para reducir armónicos y octavas duplicadas
   (interruptor, flag `--monophonic`, desactivado por defecto). Ver
@@ -71,8 +72,12 @@ las otras tres siguen siendo propuestas:
 - [x] Metrónomo con conteo audible de un compás y pulso visual durante la toma,
   con interruptor y cancelación del conteo. Ver
   [propuesta](proposals/2026-11-26-metronome.md) y evidencia en
-  [STATUS](STATUS.md). La escucha con micrófono real queda pendiente de
-  confirmación manual.
+  [STATUS](STATUS.md). La escucha con micrófono real fue confirmada por el
+  usuario.
+- [x] Compás configurable por toma (2/4, 3/4, 4/4, 6/8, 9/8, 12/8; por defecto
+  4/4), persistido y enviado al worker para el MIDI. Ver
+  [propuesta](proposals/2026-11-26-time-signature.md). Pendiente: escucha en
+  compases compuestos.
 - [ ] Armonías y backtracks por estilo (jazz, pop, rock, cumbia, cuarteto, folk)
   a partir de una o varias tomas. Ver [propuesta](proposals/2026-11-26-style-backtracks.md).
 

@@ -66,7 +66,9 @@ Los solapamientos son válidos. No se cuantiza ni redondea al cargar.
 En tempo constante: segundos = ticks × 60 / (ppq × tempoBpm).
 La conversión implementada redondea al tick más cercano, con empates hacia arriba;
 limita notas a la duración de análisis y asegura al menos un tick. Exporta SMF0.
-La UI M01-A limita tempo a 40–240 BPM, PPQ a 480 y compás a 4/4.
+La UI limita tempo a 40–240 BPM y PPQ a 480. El compás se elige por toma
+(2/4, 3/4, 4/4, 6/8, 9/8 o 12/8, con 4/4 por defecto) y se guarda en el
+proyecto; M01-A lo tenía fijo en 4/4.
 
 `sourceAudioId` es opcional en cada pista; si existe debe resolver a un asset.
 IDs de assets y pistas son únicos en sus respectivas colecciones; IDs de notas

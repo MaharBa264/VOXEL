@@ -4,3 +4,4 @@
 .postprocess-option{display:flex;align-items:center;gap:8px;margin:8px 0 0;font-size:.72rem;color:#a3b09b;cursor:pointer}.postprocess-option input{accent-color:#bbf184;margin:0}.postprocess-option input:disabled{cursor:not-allowed}
 .input-kind{display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:.72rem;color:#a3b09b}.input-kind span{font-size:.72rem}.input-kind select{background:#171f17;color:#d6e0cd;border:1px solid #3d4c36;border-radius:6px;padding:8px;font-size:.75rem;min-width:130px}
 .input-kind{display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:.72rem;color:#a3b09b}.input-kind span{font-size:.72rem}.input-kind select{background:#171f17;color:#d6e0cd;border:1px solid #3d4c36;border-radius:6px;padding:8px;font-size:.75rem;min-width:130px}
+.tempo select{width:86px;padding:5px;border:1px solid #42523b;border-radius:4px;background:#101710;color:#e2eadb;font-size:.85rem}

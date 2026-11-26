@@ -25,7 +25,7 @@ describe('reloj de pulsos', () => {
     vi.useFakeTimers();
     let now = 0;
     const beats: number[] = [];
-    const stop = startBeatClock({ bpm: 120, origin: 0, now: () => now, onBeat: (index) => beats.push(index) });
+    const stop = startBeatClock({ bpm: 120, timeSignature: { numerator: 4, denominator: 4 }, origin: 0, now: () => now, onBeat: (index) => beats.push(index) });
     expect(beats).toEqual([0]);
 
     now = 520;
@@ -46,12 +46,30 @@ describe('reloj de pulsos', () => {
     vi.useFakeTimers();
     let now = 0;
     const beats: number[] = [];
-    startBeatClock({ bpm: 60, origin: 1000, now: () => now, onBeat: (index) => beats.push(index) });
+    startBeatClock({ bpm: 60, timeSignature: { numerator: 4, denominator: 4 }, origin: 1000, now: () => now, onBeat: (index) => beats.push(index) });
     vi.advanceTimersByTime(900);
     expect(beats).toEqual([]);
     now = 1000;
     vi.advanceTimersByTime(60);
     expect(beats).toEqual([0]);
+  });
+
+  it('usa el pulso del denominador y reinicia el acento según el numerador', () => {
+    vi.useFakeTimers();
+    let now = 0;
+    const beats: number[] = [];
+    const stop = startBeatClock({
+      bpm: 120, timeSignature: { numerator: 6, denominator: 8 }, origin: 0,
+      now: () => now, onBeat: (index) => beats.push(index),
+    });
+    expect(beats).toEqual([0]);
+    now = 260;
+    vi.advanceTimersByTime(60);
+    expect(beats).toEqual([0, 1]);
+    now = 1500;
+    vi.advanceTimersByTime(60);
+    expect(beats).toEqual([0, 1, 0]);
+    stop();
   });
 });
 

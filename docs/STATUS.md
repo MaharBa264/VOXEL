@@ -29,14 +29,15 @@ proyectos.
 
 Alcance implementado:
 
-- Un compás de 4 pulsos al tempo elegido (40–240 BPM, 4/4) antes de abrir la
-  toma. El primer pulso se acentúa.
+- Un compás de conteo al tempo elegido (40–240 BPM; inicialmente 4/4 fijo y,
+  desde el 2026-11-26, compás seleccionable: ver sección correspondiente) antes
+  de abrir la toma. El primer pulso se acentúa.
 - El micrófono se concede antes del conteo, pero `MediaRecorder.start()` se
   ejecuta recién en el quinto pulso: los clics no forman parte del audio
   grabado.
-- Durante la grabación, cuatro marcas visuales siguen el pulso sin emitir
-  sonido. El reloj se calcula desde el `performance.now()` del downbeat para
-  no acumular deriva.
+- Durante la grabación, las marcas visuales de un compás siguen el pulso sin
+  emitir sonido. El reloj se calcula desde el `performance.now()` del downbeat
+  para no acumular deriva.
 - Interruptor «Conteo audible y pulso visual del metrónomo», activado por
   defecto. Al desactivarlo se conserva el comportamiento anterior: grabar de
   inmediato y sin marcas.
@@ -125,6 +126,33 @@ Comportamiento actual:
 
 Pendiente: motores para silbido y percusión, y decisión sobre persistencia del
 tipo en el proyecto (el contrato v1 no varió).
+
+## Compás configurable — 2026-11-26
+
+Detalle pedido por el usuario antes de continuar con las propuestas de orden
+posterior. Ver [propuesta](proposals/2026-11-26-time-signature.md).
+
+Alcance implementado:
+
+- Selector de compás para la próxima toma: 2/4, 3/4, 4/4, 6/8, 9/8 y 12/8,
+  con 4/4 por defecto. Al abrir un proyecto se recupera su compás.
+- `timeSignature` se persiste en el proyecto v1 y viaja al worker con
+  `--time-signature`; el metaevento 0x58 del MIDI del proyecto y de la descarga
+  usa el mismo compás.
+- El conteo audible y el pulso visual siguen la unidad del denominador con BPM
+  referido a la negra; el número de pulsos es el numerador.
+
+Comandos y resultados:
+
+| Comando | Resultado |
+| --- | --- |
+| `npm.cmd run check` | Código 0 (84 pruebas JS y build web) |
+| `npm.cmd run test:python` | Código 0 (13 pruebas) |
+| `cargo check --locked` / `cargo test --locked` | Código 0 (13 pruebas) |
+| `npm.cmd run test:desktop` | Código 0, PASS nativo; compás 3/4 persistido |
+
+Pendiente: escucha humana del conteo en compases compuestos y decisión sobre
+cambiar el compás de una toma ya guardada.
 
 ## Aceptación manual M01-A — 2026-11-26
 
