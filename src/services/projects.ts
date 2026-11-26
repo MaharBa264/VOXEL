@@ -19,6 +19,7 @@ export async function listProjects(): Promise<{ id: string; name: string }[]> {
 }
 export async function loadProject(projectId: string) { return parseProject(await invoke('load_project', { projectId })); }
 export async function saveBacktrack(projectId: string, tracks: Track[]) { return parseProject(await invoke('save_backtrack', { projectId, tracks })); }
+export async function savePercussionTrack(projectId: string, track: Track) { return parseProject(await invoke('save_backtrack', { projectId, tracks: [track] })); }
 export async function transcribeTake(projectId: string, monophonic: boolean, inputKind: string) { return parseProject(await invoke('transcribe_take', { projectId, monophonic, inputKind })); }
 export async function cancelTranscription() { await invoke('cancel_transcription'); }
 export async function originalAudio(projectId: string) {

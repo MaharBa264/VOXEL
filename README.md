@@ -12,9 +12,10 @@ original conservado, transcripción local con Basic Pitch, notas PPQ, piano
 muestreado local, descarga MIDI y recuperación de tomas. Las unidades siguientes
 implementadas en desarrollo son el metrónomo con conteo audible y pulso visual,
 el post-proceso monofónico opcional, el selector de tipo de entrada (voz y
-percusión operativas), el compás configurable por toma y el primer
-corte de backtracks pop (acordes corregibles por compás y pistas MIDI de acordes
-y bajo). Las fases restantes están registradas como
+percusión operativas), el compás configurable por toma, el primer corte de
+backtracks pop (acordes corregibles por compás y pistas MIDI de acordes y bajo) y
+la batería sintetizada con instrumento elegible por línea de percusión. Las
+fases restantes están registradas como
 [propuestas](docs/proposals/README.md) y todavía no están implementadas.
 
 ## Probar una melodía en este equipo
@@ -42,6 +43,10 @@ npm.cmd run desktop:dev:local
    **Generar acompañamiento pop**: se agregan pistas MIDI de acordes y bajo,
    silenciables, exportables y eliminables. Sólo funciona con una toma y estilo
    pop; no genera audio ni percusión.
+8. Si transcribiste golpes como **Percusión**, elegí el instrumento de la línea
+   (bombo, redo, toms, platos…) y pulsá **Escuchar piano**: la batería suena
+   sintetizada en el equipo y el MIDI exportado conserva el canal 10 GM. Por
+   ahora es una sola línea por proyecto.
 
 Con el metrónomo activado, el conteo audible no forma parte del audio grabado:
 la grabación inicia en el pulso de la toma. Usá auriculares para que el clic no

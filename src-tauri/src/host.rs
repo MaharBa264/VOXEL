@@ -776,11 +776,20 @@ pub fn save_backtrack(
     tracks: Vec<Track>,
 ) -> Result<Project> {
     let mut project = host.store.load(&project_id)?;
-    if tracks.len() > 2 {
-        return Err("Invalid backtrack tracks".into());
+    if tracks.len() > 3 {
+        return Err("Invalid extra tracks".into());
     }
-    project.tracks.retain(|track| track.id == "melody" || track.id == "percussion");
-    project.tracks.extend(tracks);
+    if tracks.is_empty() {
+        project.tracks.retain(|track| track.id == "melody" || track.id == "percussion");
+    } else {
+        for track in tracks {
+            if track.id == "melody" {
+                return Err("The melody track cannot be replaced".into());
+            }
+            project.tracks.retain(|existing| existing.id != track.id);
+            project.tracks.push(track);
+        }
+    }
     host.store.persist(&project)?;
     Ok(project)
 }

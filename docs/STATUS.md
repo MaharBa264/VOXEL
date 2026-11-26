@@ -22,8 +22,9 @@
   en la inferencia.
 - Compás configurable por toma, confirmado manualmente el 2026-11-26; ver la
   sección correspondiente.
-- Motor de percusión local implementado el 2026-11-26; ver la sección
-  correspondiente. Silbido sigue sin motor.
+- Motor de percusión local y batería sintetizada con instrumento elegible por
+  línea, implementados el 2026-11-26; ver las secciones correspondientes.
+  Silbido sigue sin motor.
 - Backtracks por estilo: primer corte pop aprobado e implementado (acordes
   corregibles por compás y pistas MIDI de acordes y bajo); ver la sección
   correspondiente y [la propuesta](proposals/2026-11-26-style-backtracks.md).
@@ -172,10 +173,39 @@ Comandos y resultados:
 | `cargo check --locked` / `cargo test --locked` | Código 0 (15 pruebas) |
 | `npm.cmd run test:desktop` | Código 0, PASS nativo; pista de percusión en canal 9 |
 
-Límites: detección por reglas y tres voces de batería, sin samples propios; el
-piano local reproduce los golpes como referencia sonora, no como batería. Hace
-falta calibración con golpes reales sobre escritorio/mesa y micrófono, y sigue
-pendiente el motor de silbido.
+Límites: detección por reglas y tres voces de batería; hace falta calibración con
+golpes reales sobre escritorio/mesa y micrófono, y sigue pendiente el motor de
+silbido.
+
+## Batería sintetizada y asignación de instrumento — 2026-11-26
+
+Fase 1 de la unidad de batería, aprobada por el usuario. Ver
+[propuesta](proposals/2026-11-26-drum-kit.md).
+
+Alcance implementado:
+
+- Sintetizador local en `src/audio/drums.ts`: bombo, caja, palmas, toms, hi-hats,
+  ride y crash con osciladores y ruido filtrado, sin samples ni conexión.
+- Lista GM reducida en `src/domain/drums.ts` (notas 35–51) y selector
+  «Instrumento de esta línea»: reasigna todas las notas de la pista de percusión
+  conservando tiempos, velocity e IDs; la pista sigue en canal 9 del proyecto v1.
+- `save_backtrack` reemplaza pistas adicionales por ID sin tocar la melodía; el
+  array vacío sigue quitando acordes y bajo y conserva la percusión.
+- Reproducción conjunta: piano para melodía/acordes/bajo y batería sintetizada
+  para percusión; «Detener reproducción» detiene ambas.
+
+Comandos y resultados:
+
+| Comando | Resultado |
+| --- | --- |
+| `npm.cmd run check` | Código 0 (93 pruebas JS y build web) |
+| `cargo check --locked` / `cargo test --locked` | Código 0 (15 pruebas) |
+| `npm.cmd run test:desktop` | Código 0: 8 golpes detectados, línea reasignada a tom alto (nota 45) |
+
+Límites: una sola línea de percusión por proyecto, asignación por línea y no por
+golpe, síntesis aproximada y posible desfase de unos milisegundos entre los dos
+contextos de audio. La Fase 2 (varias líneas con audio propio y contrato
+actualizado) sigue como propuesta.
 
 ## Compás configurable — 2026-11-26
 

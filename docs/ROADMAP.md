@@ -69,6 +69,11 @@ restantes de backtracks siguen como propuesta:
   operativos; silbido sigue deshabilitado «sin motor aún». Ver
   [propuesta](proposals/2026-11-26-input-kind.md) y evidencia en
   [STATUS](STATUS.md). Falta calibrar la percusión con golpes reales.
+- [x] Batería sintetizada con Web Audio y selector de instrumento GM por línea
+  de percusión (Fase 1). Ver [propuesta](proposals/2026-11-26-drum-kit.md).
+- [ ] Fase 2 de batería: varias líneas de percusión en un mismo proyecto, cada
+  una con audio propio e instrumento asignado; requiere actualizar el contrato.
+  Ver la misma propuesta.
 - [x] Metrónomo con conteo audible de un compás y pulso visual durante la toma,
   con interruptor y cancelación del conteo. Ver
   [propuesta](proposals/2026-11-26-metronome.md) y evidencia en

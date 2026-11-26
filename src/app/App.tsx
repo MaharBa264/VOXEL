@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Project, TimeSignature, Track } from '../domain/project';
 import { analyzeHarmony, buildPopBacktrack, diatonicChords, keyLabel, readChordsFromNotes, type Chord, type ChordOption } from '../domain/harmony';
+import { DRUM_INSTRUMENTS, drumInstrument, drumInstrumentByNote, reassignDrumNotes } from '../domain/drums';
 import { prepareAnalysis, startRecording, type Recording } from '../audio/capture';
 import { createMetronome, startBeatClock, type Metronome } from '../audio/metronome';
+import { DrumPlayer } from '../audio/drums';
 import { encodeProjectMidi, ticksToSeconds } from '../audio/midi';
 import { PianoPlayer } from '../audio/piano';
 import * as projects from '../services/projects';
@@ -34,6 +36,7 @@ export function App() {
   const [keyName, setKeyName] = useState('');
   const [includeBacktrack, setIncludeBacktrack] = useState(true);
   const [backtrackBusy, setBacktrackBusy] = useState(false);
+  const [drumId, setDrumId] = useState('kick');
   const [beat, setBeat] = useState(-1);
   const [elapsed, setElapsed] = useState(0);
   const [project, setProject] = useState<Project>();
@@ -48,6 +51,7 @@ export function App() {
   const recordRun = useRef(0);
   const cancelAck = useRef<Promise<void> | undefined>(undefined);
   const piano = useRef(new PianoPlayer());
+  const drums = useRef(new DrumPlayer());
   const metronome = useRef<Metronome | undefined>(undefined);
   const beatClock = useRef<(() => void) | undefined>(undefined);
   const playRun = useRef(0);
@@ -65,9 +69,9 @@ export function App() {
   const beatsPerBar = Math.trunc(timeSignature.numerator);
   const meterLabel = `${timeSignature.numerator}/${timeSignature.denominator}`;
   const projectMeterLabel = project ? `${project.timeSignature.numerator}/${project.timeSignature.denominator}` : meterLabel;
-  const notes = project?.tracks.flatMap((track) => track.notes) ?? [];
   const melodyNotes = project?.tracks.find((track) => track.id === 'melody')?.notes ?? [];
   const percussionNotes = project?.tracks.find((track) => track.id === 'percussion')?.notes ?? [];
+  const tonalNotes = project?.tracks.filter((track) => track.id !== 'percussion').flatMap((track) => track.notes) ?? [];
   const primaryNotes = percussionNotes.length ? percussionNotes : melodyNotes;
   const chordTrack = project?.tracks.find((track) => track.id === 'backtrack-chords');
   const chordKey = (chord: Chord) => `${chord.root}-${chord.quality}`;
@@ -81,7 +85,7 @@ export function App() {
       .catch((failure: unknown) => { if (mounted.current) setError(errorText(failure)); });
     return () => {
       mounted.current = false; playRun.current++; recordRun.current++; captureAbort.current?.abort(); recording.current?.abort();
-      beatClock.current?.(); metronome.current?.dispose(); piano.current.dispose(); audio.current?.pause();
+      beatClock.current?.(); metronome.current?.dispose(); piano.current.dispose(); drums.current.dispose(); audio.current?.pause();
       if (phaseRef.current === 'transcribing' || phaseRef.current === 'canceling') void projects.cancelTranscription().catch(() => {});
     };
   }, [native]);
@@ -103,6 +107,10 @@ export function App() {
       ? readChordsFromNotes(written.notes, project.ppq, project.timeSignature)
       : proposal.bars.map((bar) => bar.chord));
   }, [project?.id, melodyNotes.length]);
+  useEffect(() => {
+    const detected = percussionNotes.length ? drumInstrumentByNote(percussionNotes[0]?.pitch ?? -1) : undefined;
+    if (detected) setDrumId(detected.id);
+  }, [project?.id, percussionNotes.length]);
 
   const refresh = async () => {
     try { const items = await projects.listProjects(); if (mounted.current) setSaved(items); }
@@ -203,14 +211,30 @@ export function App() {
     const maxTick = Math.min(Number.MAX_SAFE_INTEGER, Math.floor(duration * project.ppq * project.tempoBpm / 60));
     void writeBacktrack(buildPopBacktrack(chords, project.ppq, project.timeSignature, maxTick));
   };
+  const chooseDrum = async (id: string) => {
+    if (!project || !native || phaseRef.current !== 'idle' || !percussionNotes.length) return;
+    const instrument = drumInstrument(id);
+    if (!instrument) return;
+    setDrumId(id); setError(''); setBacktrackBusy(true); changePhase('saving');
+    try {
+      const next = await projects.savePercussionTrack(project.id, {
+        id: 'percussion', name: 'Percusión', midiChannel: 9, program: 0,
+        sourceAudioId: 'original', notes: reassignDrumNotes(percussionNotes, instrument.note),
+      });
+      if (!mounted.current) return;
+      setProject(next); setNotice(`Línea de percusión asignada a ${instrument.label}.`);
+    } catch (failure) { if (mounted.current) setError(errorText(failure)); }
+    finally { if (mounted.current) setBacktrackBusy(false); changePhase('idle'); }
+  };
   const play = async () => {
     if (!project || !primaryNotes.length || phaseRef.current !== 'idle') return;
     audio.current?.pause(); setError(''); changePhase('piano-loading');
     const run = ++playRun.current;
     try {
-      await piano.current.play(includeBacktrack ? notes : melodyNotes, project.ppq, project.tempoBpm, () => changePhase('idle'));
+      if (percussionNotes.length) void drums.current.play(percussionNotes, project.ppq, project.tempoBpm).catch(() => {});
+      await piano.current.play(includeBacktrack ? tonalNotes : melodyNotes, project.ppq, project.tempoBpm, () => changePhase('idle'));
       if (mounted.current && run === playRun.current && currentPhase() === 'piano-loading') changePhase('playing');
-    } catch (failure) { if (mounted.current && run === playRun.current) { setError(errorText(failure)); changePhase('idle'); } }
+    } catch (failure) { if (mounted.current && run === playRun.current) { drums.current.stop(); setError(errorText(failure)); changePhase('idle'); } }
   };
   const download = () => {
     if (!project || !primaryNotes.length || !idle) return;
@@ -268,7 +292,16 @@ export function App() {
             <option value="percussion">Percusión (golpes)</option>
           </select>
         </span></label>
-        <p className="fine-print">Percusión detecta golpes y los guarda en canal 10 GM; silbido sigue sin motor. El piano local es sólo referencia sonora de los golpes.</p>
+        <p className="fine-print">Percusión detecta golpes y los guarda en canal 10 GM; silbido sigue sin motor.</p>
+        {percussionNotes.length > 0 && <div className="drum-line">
+          <div className="harmony-head"><span className="step">LÍNEA DE PERCUSIÓN</span><span className="muted">{percussionNotes.length} golpes</span></div>
+          <label className="input-kind">Instrumento de esta línea <span>
+            <select aria-label="Instrumento de la línea de percusión" value={drumId} disabled={!native || !idle || backtrackBusy} onChange={(event) => void chooseDrum(event.target.value)}>
+              {DRUM_INSTRUMENTS.map((instrument) => <option key={instrument.id} value={instrument.id}>{instrument.label} · {instrument.note}</option>)}
+            </select>
+          </span></label>
+          <p className="fine-print">La batería se sintetiza en el equipo: bombo, caja, toms y platos sin samples ni conexión.</p>
+        </div>}
         {harmonyReady && <div className="harmony">
           <div className="harmony-head"><span className="step">ARMONÍA PROPUESTA</span><span className="muted">{keyName}</span></div>
           <p className="fine-print">Elegí el acorde de cada compás y generá un acompañamiento pop en pistas MIDI. La melodía y el audio original no se modifican.</p>
@@ -288,7 +321,7 @@ export function App() {
         <div className="result-actions">
           {phase === 'transcribing' || phase === 'canceling' ? <button disabled={phase === 'canceling'} onClick={() => void cancel()}>{phase === 'canceling' ? 'Cancelando…' : 'Cancelar transcripción'}</button>
             : <button disabled={!native || !project || !idle} onClick={() => void transcribe()}>Transcribir melodía</button>}
-          {phase === 'playing' || phase === 'piano-loading' ? <button onClick={() => { playRun.current++; piano.current.stop(); changePhase('idle'); }}>■ Detener piano</button>
+          {phase === 'playing' || phase === 'piano-loading' ? <button onClick={() => { playRun.current++; piano.current.stop(); drums.current.stop(); changePhase('idle'); }}>■ Detener reproducción</button>
             : <button disabled={!native || !primaryNotes.length || !idle} onClick={() => void play()}>▶ Escuchar piano</button>}
           <button className="download" disabled={!native || !primaryNotes.length || !idle} onClick={download}>↓ Descargar MIDI</button>
         </div>

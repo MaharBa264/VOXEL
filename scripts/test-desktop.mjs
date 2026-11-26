@@ -161,7 +161,7 @@ try {
   }
   if (peak <= 0.0001) console.error('Audio diagnostics', await page.evaluate(() => window.__voxelTestAnalysers.map((a) => ({ state: a.context.state, time: a.context.currentTime, inputs: a.numberOfInputs }))), consoleErrors);
   assert.ok(peak > 0.0001, 'Local piano produces a nonzero Web Audio signal');
-  await page.getByRole('button', { name: /Detener piano/ }).click();
+  await page.getByRole('button', { name: /Detener reproducción/ }).click();
   const cdp = await context.newCDPSession(page);
   await cdp.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: output, eventsEnabled: true });
   await page.getByRole('button', { name: /Descargar MIDI/ }).click();
@@ -214,6 +214,16 @@ try {
   const drumTrack = percussionProject.tracks.find((entry) => entry.id === 'percussion');
   assert.ok(drumTrack, 'Percussion transcription creates a drum track');
   assert.equal(drumTrack.midiChannel, 9, 'Drum track uses General MIDI channel 10');
+  assert.ok(drumTrack.notes.length > 0, 'Synthetic take produces percussion hits');
+  // Per-line instrument: synthesized kit and GM pitch reassignment.
+  const drumSelect = page.getByRole('combobox', { name: /Instrumento de la línea de percusión/ });
+  assert.ok(await drumSelect.isVisible(), 'Drum instrument selector is shown');
+  await drumSelect.selectOption('tom-high');
+  await page.getByText('Línea de percusión asignada a Tom alto.').waitFor();
+  const remapped = JSON.parse(await readFile(join(projectPath, 'project.json'), 'utf8'));
+  const remappedDrums = remapped.tracks.find((entry) => entry.id === 'percussion');
+  assert.ok(remappedDrums.notes.length > 0, 'Remapping preserves the hits');
+  assert.ok(remappedDrums.notes.every((entry) => entry.pitch === 45), 'Line uses the chosen GM tom note');
   await page.screenshot({ path: join(output, 'studio.png'), fullPage: true });
   assert.deepEqual(externalRequests, [], 'No external page requests allowed');
   assert.deepEqual(errors, [], 'No unhandled page errors');
@@ -223,7 +233,8 @@ try {
     metronomeDefault: true, countInCanceled: true, countingElapsed, countInPeak,
     timeSignature: project.timeSignature,
     midiDownload: true, backtrackTracks: withBacktrack.tracks.length, backtrackMidiTracks: 3,
-    backtrackRemoved: true, percussionTrack: true, pianoSignalPeak: peak, captureStates, notes: project.tracks[0].notes,
+    backtrackRemoved: true, percussionTrack: true, drumHits: drumTrack.notes.length,
+    drumInstrument: 'tom-high', pianoSignalPeak: peak, captureStates, notes: project.tracks[0].notes,
     externalRequests, errors }, null, 2));
   console.log(`PASS: native WebView2 → real recording → Tauri storage → Python inference → PPQ/MIDI → piano → reopen. Report: ${output}`);
 } catch (error) {

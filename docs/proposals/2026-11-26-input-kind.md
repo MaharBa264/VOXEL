@@ -2,7 +2,9 @@
 
 **Estado:** selector conectado al worker vía `--input-kind`. `voice` y
 `percussion` están operativos desde el 2026-11-26; `whistle` sigue deshabilitado
-y etiquetado «sin motor aún». Ver
+y etiquetado «sin motor aún». La línea de percusión puede sonar con la batería
+sintetizada y asignar instrumento GM:
+[batería](2026-11-26-drum-kit.md). Ver
 [STATUS](../STATUS.md#motor-de-percusión--2026-11-26).
 
 ## Problema y contexto
