@@ -1,6 +1,8 @@
 # Posproceso monofónico opcional
 
-**Estado:** propuesta — solicitada por el usuario el 2026-11-26. No implementada.
+**Estado:** implementado en desarrollo el 2026-11-26 (opción desactivada por
+defecto). Ver [STATUS](../STATUS.md#metrónomo-conteo-audible-y-pulso-visual--2026-11-26)
+para la unidad anterior y la evidencia de esta.
 
 ## Problema y contexto
 
@@ -57,7 +59,33 @@ resultado. No modificar el contrato v1: el filtro produce las mismas notas PPQ.
 
 ## Decisiones pendientes
 
-- ¿Interruptor visible o aplicación automática sólo para entradas de voz?
 - ¿Se conserva también la salida cruda del modelo para comparar?
 - Umbrales de solapamiento, relación de armónico y amplitud.
 - Prioridad frente a las demás propuestas posteriores a M01-A.
+
+## Resultado de la implementación
+
+Decisiones tomadas para esta unidad:
+
+- Se implementó la alternativa 1: filtro posterior `select_monophonic` en
+  `python/transcribe.py`, que descarta notas una octava o más por encima de un
+  sustentante inferior con solapamiento temporal.
+- El filtro es **opt-in** y se activa con el interruptor de la interfaz
+  «Post-proceso monofónico: quitar armónicos y notas duplicadas»; por defecto
+  está desactivado y la transcripción queda igual que antes.
+- Se agregó el flag `--monophonic` al worker y se conectó desde el comando
+  Tauri `transcribe_take` (arg opcional, valor por defecto `false`). No se
+  modificó el contrato v1 del proyecto: el filtro produce las mismas notas PPQ.
+- El filtro entra en la inferencia, así el MIDI generado y el JSON del worker
+  se escriben con el mismo conjunto de notas.
+
+## Validación ejecutada
+
+- Pruebas unitarias de Python sobre eventos sintéticos: armónico de una octava
+  se descarta, notas sin relación armónica se conservan, notas sueltas sin
+  solapamiento se conservan.
+- Prueba del flag con silencio (sin cargar el modelo).
+- `npm.cmd run check`, `npm.cmd run test:python`, `cargo check/test` y el E2E
+  nativo (`npm.cmd run test:desktop`) en verde con el worker nuevo.
+- Pendiente: comparar una misma toma real con y sin filtro antes de activar el
+  interruptor por defecto.

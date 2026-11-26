@@ -110,6 +110,27 @@ class WorkerTests(unittest.TestCase):
         self.assertEqual(sha256(source.read_bytes()).digest(), before)
 
 
+    def test_monophonic_filter_drops_octave_harmonics_and_keeps_melody_notes(self):
+        events = [(0.0, 1.0, 61, 1), (0.0, 0.6, 73, 1), (0.5, 0.9, 64, 1)]
+        notes = self.worker.convert_events(events, 120, 480, 1)
+        filtered = self.worker.select_monophonic(notes)
+        self.assertEqual([note['pitch'] for note in filtered], [61, 64])
+
+    def test_monophonic_filter_keeps_sustained_notes_without_harmonic_relation(self):
+        notes = [
+            {'id': 'a', 'pitch': 60, 'velocity': 90, 'startTick': 0, 'durationTicks': 960},
+            {'id': 'b', 'pitch': 64, 'velocity': 80, 'startTick': 960, 'durationTicks': 480},
+        ]
+        self.assertEqual([note['pitch'] for note in self.worker.select_monophonic(notes)], [60, 64])
+
+    def test_monophonic_flag_rejects_silence_before_model_load(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / '.cache') as folder:
+            p = Path(folder); source = p / 'in.wav'
+            wav(source, [1] * 22050)
+            result = self.worker.transcribe(source, p / 'out.json', p / 'out.mid', 120, 480, monophonic=True)
+            self.assertEqual(result, {'protocolVersion': 1, 'notes': [], 'silence': True})
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 

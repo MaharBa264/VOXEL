@@ -94,7 +94,10 @@ try {
   await page.evaluate(async () => { const stream = await window.__voxelSyntheticInput(); window.__voxelResolvePermission(stream); });
   await page.waitForFunction(() => window.__voxelTestStreams.every((stream) => stream.getTracks().every((track) => track.readyState === 'ended')));
   await page.evaluate(() => { navigator.mediaDevices.getUserMedia = window.__voxelSyntheticInput; });
-  assert.equal(await page.getByRole('checkbox').isChecked(), true, 'Metronome is enabled by default');
+  const metronomeToggle = page.getByRole('checkbox', { name: /Conteo audible/ });
+  assert.equal(await metronomeToggle.isChecked(), true, 'Metronome is enabled by default');
+  const monophonicToggle = page.getByRole('checkbox', { name: /Post-proceso monofónico/ });
+  assert.equal(await monophonicToggle.isChecked(), false, 'Monophonic post-process is disabled by default');
   // Cancel a count-in: no take is saved and the microphone is released.
   await page.getByRole('button', { name: /Grabar melodía/ }).click();
   await page.getByRole('button', { name: /Cancelar conteo/ }).waitFor();

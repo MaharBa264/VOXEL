@@ -9,10 +9,10 @@ multipista, desde una toma o desde una armonía.
 **Estado actual:** M01-A aceptado manualmente el 2026-11-26 con limitaciones de
 transcripción documentadas en [STATUS](docs/STATUS.md): grabación corta, audio
 original conservado, transcripción local con Basic Pitch, notas PPQ, piano
-muestreado local, descarga MIDI y recuperación de tomas. La unidad siguiente,
-el metrónomo con conteo audible y pulso visual, está implementada en desarrollo;
-ver la sección del [STATUS](docs/STATUS.md). Las demás mejoras están registradas
-como [propuestas](docs/proposals/README.md) y todavía no están implementadas.
+muestreado local, descarga MIDI y recuperación de tomas. Las unidades siguientes
+implementadas en desarrollo son el metrónomo con conteo audible y pulso visual,
+y el post-proceso monofónico opcional; las demás mejoras están registradas como
+[propuestas](docs/proposals/README.md) y todavía no están implementadas.
 
 ## Probar una melodía en este equipo
 

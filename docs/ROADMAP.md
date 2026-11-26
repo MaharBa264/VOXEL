@@ -60,8 +60,10 @@ en [STATUS](STATUS.md).
 Solicitadas por el usuario. El metrónomo ya está implementado en desarrollo;
 las otras tres siguen siendo propuestas:
 
-- [ ] Posproceso monofónico opcional para reducir armónicos y octavas duplicadas.
-  Ver [propuesta](proposals/2026-11-26-monophonic-postprocess.md).
+- [x] Posproceso monofónico opcional para reducir armónicos y octavas duplicadas
+  (interruptor, flag `--monophonic`, desactivado por defecto). Ver
+  [propuesta](proposals/2026-11-26-monophonic-postprocess.md). La comparación con
+  y sin filtro sobre toma real sigue pendiente.
 - [ ] Selector del tipo de entrada: voz/tarareo, silbido o percusión.
   Ver [propuesta](proposals/2026-11-26-input-kind.md).
 - [x] Metrónomo con conteo audible de un compás y pulso visual durante la toma,

@@ -11,6 +11,8 @@ está en el [roadmap](ROADMAP.md).
 | 2026-11-18 | Usar GitHub como registro compartido de código, decisiones y propuestas. | Permite retomar desde otro equipo con los cambios y su contexto. Las propuestas abiertas viven en [docs/proposals](proposals/README.md). |
 | 2026-11-18 | Pausar funcionalidades nuevas hasta hacer la aceptación manual de M01-A. | El recorrido integrado ya pasó en WebView2 con audio simulado. El paso pendiente es probar el resultado con micrófono, oído y archivos reales. |
 | 2026-11-26 | Aceptar M01-A con las limitaciones de transcripción documentadas. | El recorrido manual con voz real, piano, MIDI en MuseScore, reapertura y prueba sin conexión pasó. El usuario aceptó los límites del modelo y pidió registrar propuestas posteriores. |
+| 2026-11-26 | Implementar el metrónomo con conteo audible y pulso visual. | El usuario pidió «grabar con un metrónomo que dé el inicio auditivo y que luego marque el tempo visualmente»; se implementó en el orden posterior de M01-A. |
+| 2026-11-26 | Implementar el post-proceso monofónico opcional (filtro de armónicos). | El usuario pidió «agregar un postproceso monofónico opcional»; se implementó como filtro en el worker con interruptor desactivado por defecto, sin cambiar el contrato v1. |
 | 2026-11-26 | Implementar el metrónomo con conteo audible de un compás y pulso visual. | El usuario pidió «grabar con un metrónomo que dé el inicio auditivo y que luego marque el tempo visualmente»; se implementó en el orden posterior de M01-A. |
 
 ## Cierre de M01-A

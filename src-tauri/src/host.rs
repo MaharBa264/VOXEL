@@ -585,7 +585,7 @@ impl Host {
     pub fn shutdown(&self) {
         self.job.shutdown();
     }
-    fn transcribe(&self, id: &str, _lease: JobLease) -> Result<Project> {
+    fn transcribe(&self, id: &str, _lease: JobLease, monophonic: bool) -> Result<Project> {
         let mut project = self.store.load(id)?;
         let wav = self.store.read(id, "audio/analysis.wav", MAX_BYTES)?;
         let asset = &project.audio_assets[0];
@@ -624,8 +624,11 @@ impl Host {
             .arg("--tempo")
             .arg(project.tempo_bpm.to_string())
             .arg("--ppq")
-            .arg("480")
-            .current_dir(&self.workspace)
+            .arg("480");
+        if monophonic {
+            command.arg("--monophonic");
+        }
+        command.current_dir(&self.workspace)
             .env("TEMP", &temporary)
             .env("TMP", &temporary)
             .env("TMPDIR", &temporary)
@@ -712,10 +715,15 @@ pub fn save_take(
     )
 }
 #[tauri::command]
-pub async fn transcribe_take(host: tauri::State<'_, Host>, project_id: String) -> Result<Project> {
+pub async fn transcribe_take(
+    host: tauri::State<'_, Host>,
+    project_id: String,
+    monophonic: Option<bool>,
+) -> Result<Project> {
     let host = host.inner().clone();
     let lease = host.job.begin()?;
-    tauri::async_runtime::spawn_blocking(move || host.transcribe(&project_id, lease))
+    let monophonic = monophonic.unwrap_or(false);
+    tauri::async_runtime::spawn_blocking(move || host.transcribe(&project_id, lease, monophonic))
         .await
         .map_err(err)?
 }
@@ -1079,7 +1087,7 @@ mod tests {
             .save(&silence, "audio/wav", &silence, 16000, 1.0, 120.0)
             .unwrap();
         let result = host
-            .transcribe(&project.id, host.job.begin().unwrap())
+            .transcribe(&project.id, host.job.begin().unwrap(), false)
             .unwrap();
         assert!(result.tracks[0].notes.is_empty());
         assert!(host.store.file(&project.id, "melody.mid").unwrap().exists());
@@ -1094,7 +1102,7 @@ mod tests {
             .save(&tone, "audio/wav", &tone, 16000, 2.0, 120.0)
             .unwrap();
         let result = host
-            .transcribe(&project.id, host.job.begin().unwrap())
+            .transcribe(&project.id, host.job.begin().unwrap(), false)
             .unwrap();
         assert!(
             result.tracks[0].notes.iter().any(|n| n.pitch == 69),
@@ -1107,7 +1115,7 @@ mod tests {
         assert_eq!(host.store.original(&project.id).unwrap().bytes, tone);
         // A second run exercises replacing existing JSON/MIDI on Windows.
         let result = host
-            .transcribe(&project.id, host.job.begin().unwrap())
+            .transcribe(&project.id, host.job.begin().unwrap(), false)
             .unwrap();
         assert!(result.tracks[0].notes.iter().any(|n| n.pitch == 69));
     }
@@ -1134,7 +1142,7 @@ mod tests {
         let lease = host.job.begin().unwrap();
         let other = host.clone();
         let id = project.id.clone();
-        let thread = std::thread::spawn(move || other.transcribe(&id, lease));
+        let thread = std::thread::spawn(move || other.transcribe(&id, lease, false));
         let started = Instant::now();
         loop {
             let jobs = fs::read_dir(host.store.project_dir(&project.id).unwrap())

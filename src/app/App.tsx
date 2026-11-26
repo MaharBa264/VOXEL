@@ -20,6 +20,7 @@ export function App() {
   const [phase, setPhase] = useState<Phase>('idle');
   const [tempo, setTempo] = useState('120');
   const [metronomeOn, setMetronomeOn] = useState(true);
+  const [monophonic, setMonophonic] = useState(false);
   const [beat, setBeat] = useState(-1);
   const [elapsed, setElapsed] = useState(0);
   const [project, setProject] = useState<Project>();
@@ -131,7 +132,7 @@ export function App() {
     if (!project || !native || phaseRef.current !== 'idle') return;
     audio.current?.pause(); setError(''); changePhase('transcribing');
     try {
-      const next = await projects.transcribeTake(project.id);
+      const next = await projects.transcribeTake(project.id, monophonic);
       if (!mounted.current) return;
       setProject(next); setNotice(next.tracks.some((track) => track.notes.length)
         ? 'Transcripción guardada. Escuchá las notas o descargá el MIDI.'
@@ -189,6 +190,7 @@ export function App() {
           <label className="tempo">Tempo <span><input aria-label="Tempo en BPM para la próxima grabación" type="number" min="40" max="240" step="1" value={tempo} disabled={!native || !idle} onChange={(event) => setTempo(event.target.value)} /> BPM</span></label>
         </div>
         <label className="metronome-option"><input type="checkbox" checked={metronomeOn} disabled={!native || !idle} onChange={(event) => setMetronomeOn(event.target.checked)} /> <span>Conteo audible y pulso visual del metrónomo</span></label>
+        <label className="postprocess-option"><input type="checkbox" checked={monophonic} disabled={!native || !idle} onChange={(event) => setMonophonic(event.target.checked)} /> <span>Post-proceso monofónico: quitar armónicos y notas duplicadas</span></label>
         {!tempoValid && <p className="validation">Ingresá un tempo entre 40 y 240 BPM.</p>}
         <p className="fine-print">Cada toma se guarda como un proyecto nuevo. El audio original se conserva.{metronomeOn ? ' Usá auriculares para que el clic no entre en la toma.' : ''}</p>
       </section>

@@ -80,6 +80,34 @@ Confirmación manual: el usuario probó el flujo con micrófono real y reportó
 que el conteo audible y el pulso visual funcionan; la unidad quedó cerrada
 sin nuevos errores de interfaz.
 
+## Post-proceso monofónico opcional — 2026-11-26
+
+Unidad posterior a M01-A, en el orden acordado. Filtro de armónicos y notas
+duplicadas desactivado por defecto.
+
+Alcance implementado:
+
+- Filtro posterior `select_monophonic` en `python/transcribe.py`: descarta
+  notas una octava o más por encima de un sustentante inferior con solapamiento
+  temporal.
+- Interruptor de la interfaz «Post-proceso monofónico: quitar armónicos y notas
+  duplicadas», desactivado por defecto.
+- Conexión del worker vía flag `--monophonic` en el comando Tauri
+  `transcribe_take` (valor por defecto `false`).
+
+Comandos y resultados:
+
+| Comando | Resultado |
+| --- | --- |
+| `npm.cmd run check` | Código 0 |
+| `npm.cmd run test:python` | Código 0 (8 pruebas, incluidas las del filtro) |
+| `cargo check --locked` / `cargo test --locked` | Código 0 (12 pruebas) |
+| `npm.cmd run test:desktop` | Código 0, PASS nativo |
+
+Pendiente: comparar la misma toma real con y sin filtro antes de activar el
+interruptor por defecto. El filtro se activó en la prueba sintética con el modo
+off, por defecto.
+
 ## Aceptación manual M01-A — 2026-11-26
 
 El usuario aceptó M01-A con las limitaciones de transcripción documentadas más

@@ -62,6 +62,28 @@ def convert_events(events, tempo, ppq, duration):
     return notes
 
 
+def select_monophonic(notes):
+    """Optional single-voice cleanup: drop notes one octave or more above a sustained lower note.
+
+    Basic Pitch is polyphonic and reports harmonics as extra notes. For a single
+    vocal line a note at least an octave above a note that sustains it is a
+    candidate harmonic, not a melody event. The filter is opt-in: silence still
+    reports an empty note list and untouched input.
+    """
+    kept = []
+    for note in sorted(notes, key=lambda item: (item['startTick'], item['pitch'])):
+        harmonic = False
+        for other in kept:
+            interval = note['pitch'] - other['pitch']
+            sustained = other['startTick'] < note['startTick'] + note['durationTicks'] and other['startTick'] + other['durationTicks'] > note['startTick']
+            if other['pitch'] < note['pitch'] and interval > 0 and interval % 12 == 0 and sustained:
+                harmonic = True
+                break
+        if not harmonic:
+            kept.append(note)
+    return kept
+
+
 def read_audio(path):
     try:
         with wave.open(str(path), 'rb') as audio:
@@ -132,7 +154,7 @@ def validate_paths(source, output, midi):
     return paths
 
 
-def transcribe(source, output, midi, tempo, ppq):
+def transcribe(source, output, midi, tempo, ppq, monophonic=False):
     if not math.isfinite(tempo) or not 40 <= tempo <= 240:
         raise ValueError('Tempo must be finite and between 40 and 240 BPM')
     if isinstance(ppq, bool) or not isinstance(ppq, int) or not 1 <= ppq <= 32767:
@@ -141,6 +163,8 @@ def transcribe(source, output, midi, tempo, ppq):
     configure_environment()
     duration, silence = read_audio(source)
     notes = [] if silence else convert_events(infer_events(source), tempo, ppq, duration)
+    if monophonic:
+        notes = select_monophonic(notes)
     result = {'protocolVersion': 1, 'notes': notes, 'silence': silence}
     payloads = [(midi, midi_bytes(notes, tempo, ppq)),
                 (output, (json.dumps(result, allow_nan=False) + '\n').encode('utf-8'))]
@@ -169,9 +193,10 @@ def main():
     parser.add_argument('--midi', required=True, type=Path)
     parser.add_argument('--tempo', required=True, type=float)
     parser.add_argument('--ppq', required=True, type=int)
+    parser.add_argument('--monophonic', action='store_true')
     args = parser.parse_args()
     try:
-        transcribe(args.input, args.output, args.midi, args.tempo, args.ppq)
+        transcribe(args.input, args.output, args.midi, args.tempo, args.ppq, args.monophonic)
     except Exception as error:
         print(f'Transcription failed: {error}', file=sys.stderr)
         return 1
