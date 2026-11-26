@@ -76,8 +76,8 @@ propuesta:
   usuario.
 - [x] Compás configurable por toma (2/4, 3/4, 4/4, 6/8, 9/8, 12/8; por defecto
   4/4), persistido y enviado al worker para el MIDI. Ver
-  [propuesta](proposals/2026-11-26-time-signature.md). Pendiente: escucha en
-  compases compuestos.
+  [propuesta](proposals/2026-11-26-time-signature.md). Confirmado manualmente
+  por el usuario; pendiente: escucha en compases compuestos.
 - [ ] Armonías y backtracks por estilo (jazz, pop, rock, cumbia, cuarteto, folk)
   a partir de una o varias tomas. Ver [propuesta](proposals/2026-11-26-style-backtracks.md).
 

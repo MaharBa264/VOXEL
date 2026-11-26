@@ -1,8 +1,10 @@
 # Compás configurable por toma
 
-**Estado:** implementado el 2026-11-26, con 4/4 como valor por defecto. Lo pidió
-el usuario el 2026-11-26 como detalle previo a las propuestas posteriores a
-M01-A («poder cambiar el compás, aparte del tempo»).
+**Estado:** implementado y confirmado manualmente el 2026-11-26, con 4/4 como
+valor por defecto. Lo pidió el usuario el 2026-11-26 como detalle previo a las
+propuestas posteriores a M01-A («poder cambiar el compás, aparte del tempo»).
+La unidad quedó cerrada tras la prueba del usuario en la aplicación de
+escritorio.
 
 ## Problema y contexto
 
@@ -53,6 +55,8 @@ tempo para poder grabar melodías en otros compases.
   `cargo check/test` (13 pruebas) y `npm.cmd run test:desktop` en verde. En el
   E2E se eligió 3/4 antes de grabar y `project.json` conservó
   `{"numerator":3,"denominator":4}`.
+- El usuario confirmó manualmente el funcionamiento del selector en la
+  aplicación de escritorio el 2026-11-26.
 - Pendiente: verificación auditiva humana del conteo en compases compuestos
   (6/8, 9/8, 12/8) y decidir si se permite cambiar el compás de una toma ya
   guardada.

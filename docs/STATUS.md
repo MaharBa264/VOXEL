@@ -151,8 +151,12 @@ Comandos y resultados:
 | `cargo check --locked` / `cargo test --locked` | Código 0 (13 pruebas) |
 | `npm.cmd run test:desktop` | Código 0, PASS nativo; compás 3/4 persistido |
 
-Pendiente: escucha humana del conteo en compases compuestos y decisión sobre
-cambiar el compás de una toma ya guardada.
+Confirmación manual: el usuario probó el selector de compás en la aplicación de
+escritorio y reportó que funcionó el 2026-11-26. La unidad quedó cerrada sin
+nuevos errores de interfaz.
+
+Pendiente: escucha humana del conteo en compases compuestos (6/8, 9/8, 12/8) y
+decisión sobre cambiar el compás de una toma ya guardada.
 
 ## Aceptación manual M01-A — 2026-11-26
 
