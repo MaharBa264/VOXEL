@@ -1,4 +1,4 @@
-import type { MidiNote, TimeSignature } from '../domain/project';
+import type { MidiNote, Project, TimeSignature } from '../domain/project';
 
 export function ticksToSeconds(ticks: number, ppq: number, tempoBpm: number): number {
   return ticks / ppq * 60 / tempoBpm;
@@ -37,5 +37,46 @@ export function encodeMidi(notes: readonly MidiNote[], ppq: number, tempoBpm: nu
   output.set([77,84,104,100,0,0,0,6,0,0,0,1,ppq >> 8,ppq & 255,77,84,114,107]);
   new DataView(output.buffer).setUint32(18, track.length);
   output.set(track, 22);
+  return output;
+}
+
+/** Writes an SMF type 1 file, one MIDI track per project track (melody first). */
+export function encodeProjectMidi(project: Project): Uint8Array<ArrayBuffer> {
+  const { ppq, tempoBpm, timeSignature } = project;
+  if (!Number.isInteger(ppq) || ppq < 1 || ppq > 32767 || tempoBpm < 40 || tempoBpm > 240 || !project.tracks.length) {
+    throw new Error('Proyecto inválido para exportar MIDI.');
+  }
+  const denominatorExponent = Math.round(Math.log2(timeSignature.denominator));
+  const tempo = Math.round(60_000_000 / tempoBpm);
+  const meta = [0, 255, 81, 3, (tempo >> 16) & 255, (tempo >> 8) & 255, tempo & 255,
+    0, 255, 88, 4, timeSignature.numerator, denominatorExponent, 24, 8];
+  const chunks = project.tracks.map((source, index) => {
+    if (!Number.isInteger(source.midiChannel) || source.midiChannel < 0 || source.midiChannel > 15
+      || !Number.isInteger(source.program) || source.program < 0 || source.program > 127) {
+      throw new Error('Canal o programa MIDI inválido.');
+    }
+    const track = [...(index === 0 ? meta : []), 0, 0xC0 | source.midiChannel, source.program];
+    const events = source.notes.flatMap((note) => [
+      { tick: note.startTick, order: 1, bytes: [0x90 | source.midiChannel, note.pitch, note.velocity] },
+      { tick: note.startTick + note.durationTicks, order: 0, bytes: [0x80 | source.midiChannel, note.pitch, 0] },
+    ]).sort((a, b) => a.tick - b.tick || a.order - b.order);
+    let previous = 0;
+    for (const event of events) {
+      track.push(...vlq(event.tick - previous), ...event.bytes);
+      previous = event.tick;
+    }
+    track.push(0, 255, 47, 0);
+    return track;
+  });
+  const size = 14 + chunks.reduce((sum, chunk) => sum + 8 + chunk.length, 0);
+  const output = new Uint8Array(size);
+  output.set([77, 84, 104, 100, 0, 0, 0, 6, 0, 1, 0, chunks.length, ppq >> 8, ppq & 255]);
+  let offset = 14;
+  for (const chunk of chunks) {
+    output.set([77, 84, 114, 107], offset);
+    new DataView(output.buffer).setUint32(offset + 4, chunk.length);
+    output.set(chunk, offset + 8);
+    offset += 8 + chunk.length;
+  }
   return output;
 }

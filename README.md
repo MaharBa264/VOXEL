@@ -12,9 +12,10 @@ original conservado, transcripción local con Basic Pitch, notas PPQ, piano
 muestreado local, descarga MIDI y recuperación de tomas. Las unidades siguientes
 implementadas en desarrollo son el metrónomo con conteo audible y pulso visual,
 el post-proceso monofónico opcional, el selector de tipo de entrada (voz
-soportada por el motor actual) y el compás configurable por toma; las demás
-mejoras están registradas como [propuestas](docs/proposals/README.md) y todavía
-no están implementadas.
+soportada por el motor actual), el compás configurable por toma y el primer
+corte de backtracks pop (acordes corregibles por compás y pistas MIDI de acordes
+y bajo). Las fases restantes están registradas como
+[propuestas](docs/proposals/README.md) y todavía no están implementadas.
 
 ## Probar una melodía en este equipo
 
@@ -35,6 +36,10 @@ npm.cmd run desktop:dev:local
    **Cancelar transcripción** detiene el proceso y conserva el proyecto anterior.
 5. Usá **Escuchar piano**, **Descargar MIDI** o el reproductor del original.
 6. Desde **Proyecto guardado → Abrir**, recuperá audio y notas después de reiniciar.
+7. Con notas transcritas, corregí el acorde de cada compás y pulsá
+   **Generar acompañamiento pop**: se agregan pistas MIDI de acordes y bajo,
+   silenciables, exportables y eliminables. Sólo funciona con una toma y estilo
+   pop; no genera audio ni percusión.
 
 Con el metrónomo activado, el conteo audible no forma parte del audio grabado:
 la grabación inicia en el pulso de la toma. Usá auriculares para que el clic no

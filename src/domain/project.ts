@@ -84,6 +84,7 @@ export const ProjectSchema = z.strictObject({
 
 export type MidiNote = z.infer<typeof MidiNoteSchema>;
 export type TimeSignature = z.infer<typeof TimeSignatureSchema>;
+export type Track = z.infer<typeof TrackSchema>;
 export type Project = z.infer<typeof ProjectSchema>;
 
 export function parseProject(input: unknown): Project {

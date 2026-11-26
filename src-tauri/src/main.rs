@@ -9,6 +9,7 @@ fn main() {
         .manage(host)
         .invoke_handler(tauri::generate_handler![
             host::save_take,
+            host::save_backtrack,
             host::transcribe_take,
             host::cancel_transcription,
             host::list_projects,

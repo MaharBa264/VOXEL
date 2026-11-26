@@ -1,8 +1,9 @@
 # Armonías y backtracks por estilo a partir de una o varias tomas
 
-**Estado:** propuesta en evaluación — registrada el 2026-11-26. El usuario
-confirmó ese día que quiere continuar con esta línea, pero el primer corte todavía
-no está aprobado. No es una función disponible ni está implementada.
+**Estado:** primer corte aprobado e implementado el 2026-11-26 (F1 + F2, estilo
+pop, MIDI editable, corrección de acordes por compás). El usuario aprobó el
+alcance ese mismo día. Las fases F3 y F4 siguen como propuesta. Ver la evidencia
+en [STATUS](../STATUS.md#backtracks-pop-primer-corte--2026-11-26).
 
 ## Problema y contexto
 
@@ -71,8 +72,8 @@ documentar su referencia musical para evitar caricaturas.
 
 - F1/F2 no requieren varias tomas: trabajan sobre una sola. F3 sí necesita un
   proyecto con varias tomas y una línea de tiempo compartida.
-- El host valida hoy una sola pista por proyecto; F2 exige relajar ese límite
-  manteniendo validación de IDs, canales y notas.
+- El host validaba una sola pista; en F2 se relajó a un máximo de tres con IDs,
+  nombres, canales, programas y notas restringidos (ya implementado).
 - Pistas con semántica (melodía, acordes, bajo, percusión) y mezcla básica.
 - Análisis de tonalidad y acordes, con corrección manual.
 - Definición de qué significa "estilo": progresión, ritmo, voicing,
@@ -96,29 +97,54 @@ documentar su referencia musical para evitar caricaturas.
 - Verificar que el acompañamiento se pueda silenciar, editar y exportar.
 - Confirmar funcionamiento sin conexión y con licencias compatibles.
 
-## Primer corte propuesto (requiere aprobación)
+## Primer corte implementado — decisiones aprobadas
 
-- **Alcance:** F1 + F2 con un solo estilo. Se recomienda **pop** por ser el más
-  simple de formalizar en 4/4 (progresiones cortas y convenciones mínimas), no
-  por ser el más interesante musicalmente.
-- **Salida:** dos pistas MIDI nuevas (acordes y bajo) en el mismo proyecto v1;
-  silenciables, reproducibles con el piano local y exportables junto a la
-  melodía. El audio original y las notas de la melodía no se modifican.
-- **Interfaz:** botón «Proponer acompañamiento», corrección de acordes por
-  compás y selector de estilo; sin generación de audio ni percusión.
-- **Criterio de aceptación:** con una melodía sintética de prueba se detecta la
-  tonalidad correcta, los acordes son corregibles, el MIDI resultante abre con
-  tres pistas en una DAW y la app sigue funcionando sin conexión.
+- **Alcance:** F1 + F2 con un solo estilo, **pop**, aprobado por el usuario.
+- **Salida:** dos pistas MIDI nuevas (`backtrack-chords` y `backtrack-bass`) en
+  el mismo proyecto v1; se pueden silenciar al escuchar, regenerar, quitar y
+  exportar en un SMF tipo 1 de tres pistas. El audio original y las notas de la
+  melodía no se modifican.
+- **Interfaz:** botón «Generar acompañamiento pop», un selector de acorde por
+  compás y opción de incluir o no el acompañamiento en el piano; sin generación
+  de audio ni percusión.
+- **Corrección:** por compás, desde la lista diatónica de la tonalidad
+  detectada (siete opciones). No hay entrada libre de acordes en este corte.
+- **Persistencia:** las correcciones se conservan como notas MIDI en la pista
+  de acordes; al reabrir, los acordes se recuperan de esas notas. No se agregó
+  un campo de acordes ni se cambió `schemaVersion`.
 - **Explícitamente fuera:** varias tomas, estilos múltiples, audio generado,
   modelos generativos, armonización automática de la melodía y reconocimiento
   de percusión.
 
-## Decisiones pendientes
+## Resultado y límites conocidos
 
-- ¿Aprobar el primer corte (F1 + F2, estilo pop, MIDI editable)?
-- ¿Qué estilo se aborda primero y con qué referencia musical documentada?
-- ¿Cuánto control manual se da sobre los acordes: por compás o entrada libre?
-- ¿El acompañamiento se guarda como pistas del proyecto v1 o exige un nuevo
-  artefacto de sesión?
-- ¿Se parte sólo de la melodía o también de acordes ingresados por el usuario?
+- La detección de tonalidad usa un histograma de clases de pitch con perfiles
+  mayor/menor: las tonalidades relativas (p. ej. C mayor / A menor) pueden
+  confundirse cuando la melodía no acentúa la tónica. El usuario puede corregir
+  los acordes, pero no la tonalidad en este corte.
+- Sólo se proponen tríadas diatónicas; no hay séptimas, acordes prestados ni
+  sustituciones. El generador es determinista y no usa azar.
+- Las notas generadas se recortan al final del audio medido para pasar la
+  validación del host; en tomas muy cortas el acompañamiento puede sonar
+  incompleto.
+- «Pop» es una convención mínima de acordes y bajo, no una emulación de
+  producción musical. No hay referencia externa ni descarga de estilos.
+
+## Validación ejecutada
+
+- Unitarias TS: detección de tonalidad con acentos de tónica, propuesta por
+  compás, generación recortada al audio, recuperación de acordes desde la pista
+  MIDI y exportación SMF tipo 1 con tres pistas.
+- `npm.cmd run check`: 90 pruebas JS y build web en verde.
+- `cargo check/test`: 14 pruebas; la nueva valida pistas de acompañamiento,
+  rechaza IDs/canales inválidos y notas fuera del audio, y comprueba que se
+  puedan quitar sin tocar la melodía.
+- `npm.cmd run test:desktop`: E2E nativo en verde; generó tres pistas, descargó
+  un MIDI con tres pistas y las quitó conservando la melodía.
+
+## Decisiones pendientes (F3 en adelante)
+
+- ¿Cómo se modela la línea de tiempo de varias tomas sin migrar el original?
+- ¿Qué estilo se agrega después y con qué referencia musical documentada?
+- ¿Se admite entrada libre de acordes o edición de la tonalidad detectada?
 - ¿Cómo se evalúa la calidad musical y quién la aprueba?

@@ -22,9 +22,10 @@
   en la inferencia.
 - Compás configurable por toma, confirmado manualmente el 2026-11-26; ver la
   sección correspondiente.
-- Backtracks por estilo: diseño por fases y primer corte propuestos en
-  [la propuesta](proposals/2026-11-26-style-backtracks.md). Sin implementar y
-  pendiente de aprobación del primer corte.
+- Backtracks por estilo: primer corte pop aprobado e implementado (acordes
+  corregibles por compás y pistas MIDI de acordes y bajo); ver la sección
+  correspondiente y [la propuesta](proposals/2026-11-26-style-backtracks.md).
+  Las fases de varias tomas y otros estilos siguen sin implementar.
 
 ## Metrónomo: conteo audible y pulso visual — 2026-11-26
 
@@ -162,6 +163,39 @@ nuevos errores de interfaz.
 
 Pendiente: escucha humana del conteo en compases compuestos (6/8, 9/8, 12/8) y
 decisión sobre cambiar el compás de una toma ya guardada.
+
+## Backtracks pop (primer corte) — 2026-11-26
+
+Unidad siguiente del orden acordado. El usuario aprobó F1 + F2 con estilo pop,
+MIDI editable y corrección de acordes por compás. Ver
+[propuesta](proposals/2026-11-26-style-backtracks.md).
+
+Alcance implementado:
+
+- Lectura armónica local y determinista en `src/domain/harmony.ts`: tonalidad
+  por histograma de clases de pitch, un acorde diatónico por compás y lista
+  reducida de siete acordes para corregir.
+- Generación de dos pistas MIDI (`backtrack-chords`, `backtrack-bass`) en PPQ,
+  recortadas al final del audio; comando Tauri `save_backtrack` con validación
+  estricta de ID, nombre, canal, programa y notas.
+- El host acepta hasta tres pistas (melodía, acordes y bajo) sin cambiar
+  `schemaVersion`. La descarga MIDI pasa a SMF tipo 1 con tres pistas.
+- Interfaz: botón «Generar acompañamiento pop», corrección por compás, opción
+  de silenciar el acompañamiento al escuchar el piano, regeneración y
+  eliminación. El audio original y las notas de la melodía no se tocan.
+
+Comandos y resultados:
+
+| Comando | Resultado |
+| --- | --- |
+| `npm.cmd run check` | Código 0 (90 pruebas JS y build web) |
+| `cargo check --locked` / `cargo test --locked` | Código 0 (14 pruebas) |
+| `npm.cmd run test:desktop` | Código 0: 3 pistas persistidas, MIDI con 3 pistas y acompañamiento quitado |
+
+Límites: tonalidades relativas ambiguas, sólo tríadas diatónicas, una toma, un
+estilo, sin audio generado ni percusión, sin edición libre de acordes ni de la
+tonalidad. Quedan para F3/F4 la línea de tiempo de varias tomas y más estilos.
+Falta escucha humana comparativa del resultado musical.
 
 ## Aceptación manual M01-A — 2026-11-26
 

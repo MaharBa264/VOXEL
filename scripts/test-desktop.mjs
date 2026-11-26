@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -176,6 +176,30 @@ try {
   await page.getByRole('button', { name: 'Abrir', exact: true }).click();
   await page.getByText('Proyecto recuperado con su audio y sus notas.').waitFor();
   assert.equal(await page.locator('audio').count(), 1, 'Original audio recovered');
+  // Pop backtrack: per-bar chord proposals, generated MIDI tracks and removal.
+  const chordSelects = page.getByRole('combobox', { name: /Acorde del compás/ });
+  assert.ok(await chordSelects.count() > 0, 'Chord proposals are shown per bar');
+  const generateBacktrack = page.getByRole('button', { name: /Generar acompañamiento pop/ });
+  assert.ok(await generateBacktrack.isEnabled(), 'Backtrack generation is available');
+  await generateBacktrack.click();
+  await page.getByText('Acompañamiento pop generado como pistas MIDI.').waitFor();
+  const withBacktrack = JSON.parse(await readFile(join(projectPath, 'project.json'), 'utf8'));
+  assert.equal(withBacktrack.tracks.length, 3, 'Chord and bass tracks are persisted');
+  assert.equal(withBacktrack.tracks[1].id, 'backtrack-chords');
+  assert.equal(withBacktrack.tracks[2].id, 'backtrack-bass');
+  assert.deepEqual(withBacktrack.tracks[0].notes, project.tracks[0].notes, 'Melody notes are untouched');
+  const midiPath = join(output, 'melody.mid');
+  await rm(midiPath, { force: true });
+  await page.getByRole('button', { name: /Descargar MIDI/ }).click();
+  for (let attempt = 0; attempt < 50; attempt++) {
+    try { if ((await readFile(midiPath)).subarray(0, 4).equals(Buffer.from('MThd'))) break; }
+    catch { /* wait for browser download */ }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  assert.equal((await readFile(midiPath)).readUInt16BE(10), 3, 'Downloaded MIDI has three tracks');
+  await page.getByRole('button', { name: /Quitar acompañamiento/ }).click();
+  await page.getByText('Acompañamiento quitado.').waitFor();
+  assert.equal(JSON.parse(await readFile(join(projectPath, 'project.json'), 'utf8')).tracks.length, 1, 'Removal keeps the melody');
   await page.screenshot({ path: join(output, 'studio.png'), fullPage: true });
   assert.deepEqual(externalRequests, [], 'No external page requests allowed');
   assert.deepEqual(errors, [], 'No unhandled page errors');
@@ -184,7 +208,8 @@ try {
     physicalMicrophoneTested: false, permissionDenialAndLateGrant: true, cancellationPreservedProject: true,
     metronomeDefault: true, countInCanceled: true, countingElapsed, countInPeak,
     timeSignature: project.timeSignature,
-    midiDownload: true, pianoSignalPeak: peak, captureStates, notes: project.tracks[0].notes,
+    midiDownload: true, backtrackTracks: withBacktrack.tracks.length, backtrackMidiTracks: 3,
+    backtrackRemoved: true, pianoSignalPeak: peak, captureStates, notes: project.tracks[0].notes,
     externalRequests, errors }, null, 2));
   console.log(`PASS: native WebView2 → real recording → Tauri storage → Python inference → PPQ/MIDI → piano → reopen. Report: ${output}`);
 } catch (error) {

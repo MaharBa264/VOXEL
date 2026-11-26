@@ -210,7 +210,8 @@ fn validate_project(project: &Project, id: &str) -> Result<()> {
         || project.time_signature.numerator < 1
         || ![1, 2, 4, 8, 16, 32, 64, 128].contains(&project.time_signature.denominator)
         || project.audio_assets.len() != 1
-        || project.tracks.len() != 1
+        || project.tracks.is_empty()
+        || project.tracks.len() > 3
     {
         return Err("Invalid owned project format".into());
     }
@@ -231,11 +232,27 @@ fn validate_project(project: &Project, id: &str) -> Result<()> {
     {
         return Err("Invalid owned project assets or track".into());
     }
-    valid_notes(
-        &track.notes,
-        (audio.duration_seconds + 1.0 / audio.sample_rate_hz as f64).min(30.0),
-        project.tempo_bpm,
-    )
+    let note_limit = (audio.duration_seconds + 1.0 / audio.sample_rate_hz as f64).min(30.0);
+    valid_notes(&track.notes, note_limit, project.tempo_bpm)?;
+    let mut track_ids = HashSet::new();
+    track_ids.insert(track.id.as_str());
+    for extra in project.tracks.iter().skip(1) {
+        let (name, channel, program) = match extra.id.as_str() {
+            "backtrack-chords" => ("Acordes", 1, 0),
+            "backtrack-bass" => ("Bajo", 2, 32),
+            _ => return Err("Invalid backtrack track".into()),
+        };
+        if extra.name != name
+            || extra.midi_channel != channel
+            || extra.program != program
+            || extra.source_audio_id != "original"
+            || !track_ids.insert(extra.id.as_str())
+        {
+            return Err("Invalid backtrack track".into());
+        }
+        valid_notes(&extra.notes, note_limit, project.tempo_bpm)?;
+    }
+    Ok(())
 }
 
 // Reject reparse points at every component, including ancestors of the storage root.
@@ -740,6 +757,21 @@ pub fn save_take(
     )
 }
 #[tauri::command]
+pub fn save_backtrack(
+    host: tauri::State<'_, Host>,
+    project_id: String,
+    tracks: Vec<Track>,
+) -> Result<Project> {
+    let mut project = host.store.load(&project_id)?;
+    if tracks.len() > 2 {
+        return Err("Invalid backtrack tracks".into());
+    }
+    project.tracks.truncate(1);
+    project.tracks.extend(tracks);
+    host.store.persist(&project)?;
+    Ok(project)
+}
+#[tauri::command]
 pub async fn transcribe_take(
     host: tauri::State<'_, Host>,
     project_id: String,
@@ -1124,6 +1156,52 @@ mod tests {
                 "Accepted invalid time signature {invalid}"
             );
         }
+    }
+
+    fn backtrack_tracks() -> Vec<Track> {
+        vec![
+            Track {
+                id: "backtrack-chords".into(), name: "Acordes".into(), midi_channel: 1,
+                program: 0, source_audio_id: "original".into(),
+                notes: vec![Note {
+                    id: "bt-c-0".into(), pitch: 60, velocity: 68, start_tick: 0, duration_ticks: 960,
+                }],
+            },
+            Track {
+                id: "backtrack-bass".into(), name: "Bajo".into(), midi_channel: 2,
+                program: 32, source_audio_id: "original".into(),
+                notes: vec![Note {
+                    id: "bt-b-0".into(), pitch: 36, velocity: 88, start_tick: 0, duration_ticks: 480,
+                }],
+            },
+        ]
+    }
+
+    #[test]
+    fn backtrack_tracks_are_validated_and_persisted() {
+        let store = Store::new(test_root()).unwrap();
+        let project = store
+            .save(&[1], "audio/webm", &wav(16000, 16000), 16000, 1.0, 120.0)
+            .unwrap();
+        let mut with_backtrack = project.clone();
+        with_backtrack.tracks.extend(backtrack_tracks());
+        store.persist(&with_backtrack).unwrap();
+        let loaded = store.load(&project.id).unwrap();
+        assert_eq!(loaded.tracks.len(), 3);
+        assert_eq!(loaded.tracks[1].notes[0].pitch, 60);
+        assert_eq!(loaded.tracks[2].notes[0].pitch, 36);
+
+        let mut wrong_id = with_backtrack.clone();
+        wrong_id.tracks[1].id = "unknown".into();
+        assert!(store.persist(&wrong_id).is_err());
+        let mut wrong_channel = with_backtrack.clone();
+        wrong_channel.tracks[2].midi_channel = 0;
+        assert!(store.persist(&wrong_channel).is_err());
+        let mut too_far = with_backtrack.clone();
+        too_far.tracks[1].notes[0].start_tick = 900;
+        assert!(store.persist(&too_far).is_err());
+        store.persist(&project).unwrap();
+        assert_eq!(store.load(&project.id).unwrap().tracks.len(), 1);
     }
 
     #[test]

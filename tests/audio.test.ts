@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import type { Project } from '../src/domain/project';
 import { encodeMonoWav } from '../src/audio/wav';
-import { encodeMidi, ticksToSeconds } from '../src/audio/midi';
+import { encodeMidi, encodeProjectMidi, ticksToSeconds } from '../src/audio/midi';
 import { pianoEvents } from '../src/audio/piano';
+
+const track = (id: string, channel: number, program: number, pitch: number) => ({
+  id, name: id, midiChannel: channel, program, sourceAudioId: 'original',
+  notes: [{ id: `${id}-n`, pitch, velocity: 90, startTick: 0, durationTicks: 480 }],
+});
 
 describe('WAV para análisis', () => {
   it('escribe cabecera PCM16 mono y promedia canales antes de limitar amplitud', () => {
@@ -57,5 +63,25 @@ describe('secuencia PPQ y exportación MIDI', () => {
       { id: 'a', pitch: 60, velocity: 90, startTick: 0, durationTicks: 480 },
     ], 480, 120, { numerator: 4, denominator: 4 });
     expect(Array.from(bytes.slice(44, 53))).toEqual([131,96,128,60,0,0,144,60,90]);
+  });
+
+  it('exporta un SMF de varias pistas con canal, programa y compás por pista', () => {
+    const project: Project = {
+      schemaVersion: 1, id: 'project-1', name: 'Toma', ppq: 480, tempoBpm: 120,
+      timeSignature: { numerator: 4, denominator: 4 },
+      audioAssets: [{ id: 'original', path: 'audio/original.webm', mimeType: 'audio/webm',
+        sampleRateHz: 16000, channels: 1, durationSeconds: 2 }],
+      tracks: [track('melody', 0, 0, 69), track('backtrack-chords', 1, 0, 60), track('backtrack-bass', 2, 32, 36)],
+    };
+    const bytes = encodeProjectMidi(project);
+    const view = new DataView(bytes.buffer);
+    expect(Array.from(bytes.slice(0, 12))).toEqual([77,84,104,100,0,0,0,6,0,1,0,3]);
+    const chordsHeader = 14 + 8 + view.getUint32(18);
+    const bassHeader = chordsHeader + 8 + view.getUint32(chordsHeader + 4);
+    expect(Array.from(bytes.slice(22, 22 + 15))).toEqual([
+      0,255,81,3,7,161,32, 0,255,88,4,4,2,24,8,
+    ]);
+    expect(Array.from(bytes.slice(chordsHeader + 8, chordsHeader + 11))).toEqual([0,193,0]);
+    expect(Array.from(bytes.slice(bassHeader + 8, bassHeader + 11))).toEqual([0,194,32]);
   });
 });

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Project, TimeSignature } from '../domain/project';
+import type { Project, TimeSignature, Track } from '../domain/project';
+import { analyzeHarmony, buildPopBacktrack, diatonicChords, keyLabel, readChordsFromNotes, type Chord, type ChordOption } from '../domain/harmony';
 import { prepareAnalysis, startRecording, type Recording } from '../audio/capture';
 import { createMetronome, startBeatClock, type Metronome } from '../audio/metronome';
-import { encodeMidi, ticksToSeconds } from '../audio/midi';
+import { encodeProjectMidi, ticksToSeconds } from '../audio/midi';
 import { PianoPlayer } from '../audio/piano';
 import * as projects from '../services/projects';
 
@@ -28,6 +29,11 @@ export function App() {
   const [monophonic, setMonophonic] = useState(false);
   const [inputKind, setInputKind] = useState('voice');
   const [timeSignature, setTimeSignature] = useState<TimeSignature>({ numerator: 4, denominator: 4 });
+  const [chords, setChords] = useState<Chord[]>([]);
+  const [chordOptions, setChordOptions] = useState<ChordOption[]>([]);
+  const [keyName, setKeyName] = useState('');
+  const [includeBacktrack, setIncludeBacktrack] = useState(true);
+  const [backtrackBusy, setBacktrackBusy] = useState(false);
   const [beat, setBeat] = useState(-1);
   const [elapsed, setElapsed] = useState(0);
   const [project, setProject] = useState<Project>();
@@ -60,6 +66,10 @@ export function App() {
   const meterLabel = `${timeSignature.numerator}/${timeSignature.denominator}`;
   const projectMeterLabel = project ? `${project.timeSignature.numerator}/${project.timeSignature.denominator}` : meterLabel;
   const notes = project?.tracks.flatMap((track) => track.notes) ?? [];
+  const melodyNotes = project?.tracks.find((track) => track.id === 'melody')?.notes ?? [];
+  const chordTrack = project?.tracks.find((track) => track.id === 'backtrack-chords');
+  const chordKey = (chord: Chord) => `${chord.root}-${chord.quality}`;
+  const harmonyReady = Boolean(project && melodyNotes.length && chords.length);
   const tempoValid = Number.isFinite(Number(tempo)) && Number(tempo) >= 40 && Number(tempo) <= 240;
   const duration = project?.audioAssets[0]?.durationSeconds ?? 0;
 
@@ -80,6 +90,17 @@ export function App() {
     const timer = setInterval(() => setElapsed(Math.min(30, (performance.now() - started) / 1000)), 100);
     return () => clearInterval(timer);
   }, [phase]);
+  useEffect(() => {
+    if (!project) { setChords([]); setChordOptions([]); setKeyName(''); return; }
+    const melody = project.tracks.find((track) => track.id === 'melody');
+    const proposal = analyzeHarmony(melody?.notes ?? [], project.ppq, project.tempoBpm, project.timeSignature);
+    const written = project.tracks.find((track) => track.id === 'backtrack-chords');
+    setKeyName(keyLabel(proposal.key));
+    setChordOptions(diatonicChords(proposal.key));
+    setChords(written
+      ? readChordsFromNotes(written.notes, project.ppq, project.timeSignature)
+      : proposal.bars.map((bar) => bar.chord));
+  }, [project?.id, melodyNotes.length]);
 
   const refresh = async () => {
     try { const items = await projects.listProjects(); if (mounted.current) setSaved(items); }
@@ -159,19 +180,36 @@ export function App() {
     try { await cancellation; }
     catch (failure) { if (mounted.current) { setError(errorText(failure)); if (currentPhase() === 'canceling') changePhase('transcribing'); } }
   };
+  const writeBacktrack = async (tracks: Track[]) => {
+    if (!project || !native || phaseRef.current !== 'idle') return;
+    audio.current?.pause(); setError(''); setBacktrackBusy(true); changePhase('saving');
+    try {
+      const next = await projects.saveBacktrack(project.id, tracks);
+      if (!mounted.current) return;
+      setProject(next);
+      setNotice(tracks.length ? 'Acompañamiento pop generado como pistas MIDI. Podés escucharlo y exportarlo.'
+        : 'Acompañamiento quitado. La melodía y el original se conservan.');
+    } catch (failure) { if (mounted.current) setError(errorText(failure)); }
+    finally { if (mounted.current) setBacktrackBusy(false); changePhase('idle'); }
+  };
+  const generateBacktrack = () => {
+    if (!project || !harmonyReady) return;
+    const maxTick = Math.min(Number.MAX_SAFE_INTEGER, Math.floor(duration * project.ppq * project.tempoBpm / 60));
+    void writeBacktrack(buildPopBacktrack(chords, project.ppq, project.timeSignature, maxTick));
+  };
   const play = async () => {
-    if (!project || !notes.length || phaseRef.current !== 'idle') return;
+    if (!project || !melodyNotes.length || phaseRef.current !== 'idle') return;
     audio.current?.pause(); setError(''); changePhase('piano-loading');
     const run = ++playRun.current;
     try {
-      await piano.current.play(notes, project.ppq, project.tempoBpm, () => changePhase('idle'));
+      await piano.current.play(includeBacktrack ? notes : melodyNotes, project.ppq, project.tempoBpm, () => changePhase('idle'));
       if (mounted.current && run === playRun.current && currentPhase() === 'piano-loading') changePhase('playing');
     } catch (failure) { if (mounted.current && run === playRun.current) { setError(errorText(failure)); changePhase('idle'); } }
   };
   const download = () => {
-    if (!project || !notes.length || !idle) return;
+    if (!project || !melodyNotes.length || !idle) return;
     try {
-      const url = URL.createObjectURL(new Blob([encodeMidi(notes, project.ppq, project.tempoBpm, project.timeSignature)], { type: 'audio/midi' }));
+      const url = URL.createObjectURL(new Blob([encodeProjectMidi(project)], { type: 'audio/midi' }));
       const link = document.createElement('a'); link.href = url; link.download = 'melody.mid'; link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (failure) { setError(errorText(failure)); }
@@ -212,9 +250,9 @@ export function App() {
       <section className="result" aria-labelledby="result-title">
         <div className="section-top"><span className="step">02 / TRANSFORMAR</span><span className="muted">Piano · {projectMeterLabel}</span></div>
         <h3 id="result-title">De melodía a notas.</h3><p className="muted">{project ? `${duration.toFixed(1)} s · ${project.tempoBpm} BPM · ${projectMeterLabel} · ${project.ppq} PPQ` : 'Tu próxima melodía comienza acá.'}</p>
-        <div className="notes-preview" aria-label={notes.length ? `${notes.length} notas detectadas` : 'Todavía no hay notas'}>
-          {notes.length && project ? <svg viewBox="0 0 600 130" role="img" aria-label="Vista de las notas transcritas">
-            {notes.map((note, index) => <rect key={`${note.id}-${index}`} x={ticksToSeconds(note.startTick, project.ppq, project.tempoBpm) / Math.max(duration, .1) * 590} y={112 - note.pitch / 127 * 104} width={Math.max(2, ticksToSeconds(note.durationTicks, project.ppq, project.tempoBpm) / Math.max(duration, .1) * 590)} height="5" rx="2" />)}
+        <div className="notes-preview" aria-label={melodyNotes.length ? `${melodyNotes.length} notas detectadas` : 'Todavía no hay notas'}>
+          {melodyNotes.length && project ? <svg viewBox="0 0 600 130" role="img" aria-label="Vista de las notas transcritas">
+            {melodyNotes.map((note, index) => <rect key={`${note.id}-${index}`} x={ticksToSeconds(note.startTick, project.ppq, project.tempoBpm) / Math.max(duration, .1) * 590} y={112 - note.pitch / 127 * 104} width={Math.max(2, ticksToSeconds(note.durationTicks, project.ppq, project.tempoBpm) / Math.max(duration, .1) * 590)} height="5" rx="2" />)}
           </svg> : <div className="empty-notes"><span aria-hidden="true">♩</span><p>{project ? 'Audio listo para transcribir' : 'Todavía no hay una toma'}</p></div>}
         </div>
         <label className="input-kind">Tipo de entrada para la transcripción <span>
@@ -224,14 +262,30 @@ export function App() {
             <option value="percussion">Percusión</option>
           </select>
         </span></label>
+        {harmonyReady && <div className="harmony">
+          <div className="harmony-head"><span className="step">ARMONÍA PROPUESTA</span><span className="muted">{keyName}</span></div>
+          <p className="fine-print">Elegí el acorde de cada compás y generá un acompañamiento pop en pistas MIDI. La melodía y el audio original no se modifican.</p>
+          <div className="chord-grid">{chords.map((chord, index) => <label className="chord-cell" key={index}>
+            <span>{index + 1}</span>
+            <select aria-label={`Acorde del compás ${index + 1}`} value={chordKey(chord)} disabled={!native || !idle || backtrackBusy} onChange={(event) => {
+              const option = chordOptions.find((candidate) => chordKey(candidate) === event.target.value);
+              if (option) setChords((previous) => previous.map((current, position) => position === index ? { root: option.root, quality: option.quality } : current));
+            }}>{chordOptions.map((option) => <option key={chordKey(option)} value={chordKey(option)}>{option.label} · {option.degree}</option>)}</select>
+          </label>)}</div>
+          <div className="harmony-actions">
+            <button disabled={!native || !idle || backtrackBusy} onClick={generateBacktrack}>{chordTrack ? 'Regenerar acompañamiento pop' : 'Generar acompañamiento pop'}</button>
+            {chordTrack && <button disabled={!native || !idle || backtrackBusy} onClick={() => void writeBacktrack([])}>Quitar acompañamiento</button>}
+          </div>
+          {chordTrack && <label className="backtrack-option"><input type="checkbox" checked={includeBacktrack} disabled={!native || !idle} onChange={(event) => setIncludeBacktrack(event.target.checked)} /> <span>Incluir el acompañamiento al escuchar el piano</span></label>}
+        </div>}
         <div className="result-actions">
           {phase === 'transcribing' || phase === 'canceling' ? <button disabled={phase === 'canceling'} onClick={() => void cancel()}>{phase === 'canceling' ? 'Cancelando…' : 'Cancelar transcripción'}</button>
             : <button disabled={!native || !project || !idle} onClick={() => void transcribe()}>Transcribir melodía</button>}
           {phase === 'playing' || phase === 'piano-loading' ? <button onClick={() => { playRun.current++; piano.current.stop(); changePhase('idle'); }}>■ Detener piano</button>
-            : <button disabled={!native || !notes.length || !idle} onClick={() => void play()}>▶ Escuchar piano</button>}
-          <button className="download" disabled={!native || !notes.length || !idle} onClick={download}>↓ Descargar MIDI</button>
+            : <button disabled={!native || !melodyNotes.length || !idle} onClick={() => void play()}>▶ Escuchar piano</button>}
+          <button className="download" disabled={!native || !melodyNotes.length || !idle} onClick={download}>↓ Descargar MIDI</button>
         </div>
-        <p className="fine-print">{notes.length ? `${notes.length} notas · ` : ''}Piano: <a href="/piano/ATTRIBUTION.txt" target="_blank" rel="noreferrer">Alexander Holm · CC BY 3.0</a></p>
+        <p className="fine-print">{melodyNotes.length ? `${melodyNotes.length} notas · ` : ''}Piano: <a href="/piano/ATTRIBUTION.txt" target="_blank" rel="noreferrer">Alexander Holm · CC BY 3.0</a></p>
       </section>
     </div>
     <div className="status-line" role="status" aria-live="polite"><span className={`status-dot ${idle ? '' : 'active'}`} /><span>{statuses[phase]}</span><span className="status-detail">{idle ? notice : phase === 'transcribing' ? 'La primera ejecución puede tardar. Podés cancelarla.' : phase === 'counting' ? 'El conteo no forma parte de la toma.' : 'Esperá a que termine esta operación.'}</span></div>

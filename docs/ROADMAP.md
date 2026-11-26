@@ -57,9 +57,9 @@ en [STATUS](STATUS.md).
 
 ## Propuestas posteriores a M01-A — 2026-11-26
 
-Solicitadas por el usuario. Metrónomo, posproceso, selector de entrada y compás
-ya están implementados en desarrollo; los backtracks por estilo siguen como
-propuesta:
+Solicitadas por el usuario. Metrónomo, posproceso, selector de entrada, compás
+y el primer corte de backtracks ya están implementados en desarrollo; las fases
+restantes de backtracks siguen como propuesta:
 
 - [x] Posproceso monofónico opcional para reducir armónicos y octavas duplicadas
   (interruptor, flag `--monophonic`, desactivado por defecto). Ver
@@ -78,8 +78,12 @@ propuesta:
   4/4), persistido y enviado al worker para el MIDI. Ver
   [propuesta](proposals/2026-11-26-time-signature.md). Confirmado manualmente
   por el usuario; pendiente: escucha en compases compuestos.
-- [ ] Armonías y backtracks por estilo (jazz, pop, rock, cumbia, cuarteto, folk)
-  a partir de una o varias tomas. Ver [propuesta](proposals/2026-11-26-style-backtracks.md).
+- [x] Backtracks por estilo, primer corte aprobado: armonía pop de una toma con
+  acordes corregibles por compás y pistas MIDI de acordes y bajo. Ver
+  [propuesta](proposals/2026-11-26-style-backtracks.md) y evidencia en
+  [STATUS](STATUS.md). Falta escucha comparativa.
+- [ ] F3/F4: línea de tiempo de varias tomas y más estilos (jazz, rock, cumbia,
+  cuarteto, folk), sin implementar. Ver la misma propuesta.
 
 ## Fuera del alcance actual
 
